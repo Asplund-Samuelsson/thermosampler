@@ -7,6 +7,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
 # Import the script to be tested
 from sampling import *
 
+# Ensure testing is performed on the same random seed every time
+np.random.seed(42)
+
 # Stoichiometric matrix (TCA cycle); columns are reactions
 # R00351	C00024 + C00001 + C00036 <=> C00158 + C00010
 # R01325	C00158 <=> C00417 + C00001
@@ -116,7 +119,31 @@ ratio_mat = np.array([
 ])
 
 # Select maximum sum of concentrations
-max_tot_c = 0.05
+max_tot_c = 0.05 + 1 # Add 1 M for water
+
+# MDF concentration set
+c_mdf = np.log(np.array([
+    1.0000000000, # C00001
+    0.0007687213, # C00002
+    0.0018026464, # C00003
+    0.0001135667, # C00004
+    0.0004237077, # C00008
+    0.0118182519, # C00009
+    0.0015460872, # C00010
+    0.0000136000, # C00011
+    0.0025373290, # C00024
+    0.0004954426, # C00026
+    0.0000001614, # C00036
+    0.0006820748, # C00042
+    0.0014036845, # C00091
+    0.0005120070, # C00122
+    0.0011918200, # C00149
+    0.0078406055, # C00158
+    0.0000243520, # C00417
+    0.0000018146, # C00311
+    0.0005000000, # C00390
+    0.0005000000  # C00399
+]))
 
 # Define tests
 def test_random_c(c_lim=c_lim):
@@ -205,6 +232,7 @@ def test_sum_ok():
     assert sum_ok(c_success, 0.03000001)
     assert not sum_ok(c_success, 0.01)
     assert not sum_ok(c_fail, 0.04)
+    assert sum_ok(np.array([0,-3]), 0.5 + 1)
 
 def test_limits_ok():
     c_lim_test = np.log(np.array(
@@ -225,26 +253,28 @@ def test_limits_ok():
 
 def test_is_feasible(RT=RT):
     S_small = np.array(
-        [[-1,  0],
+        [[-1,  1],
+         [-1,  0],
          [ 1, -1],
          [ 0,  1]]
     )
     g_small = np.array([-10, 10])
-    c_small = np.log(np.array([0.002, 0.1, 0.0015]))
+    c_small = np.log(np.array([1.0, 0.002, 0.1, 0.0015]))
     # Violates dG
-    c_small_fail_1 = np.log(np.array([0.002, 0.1005, 0.002]))
+    c_small_fail_1 = np.log(np.array([1.0, 0.002, 0.1005, 0.002]))
     # Violates ratio
-    c_small_fail_2 = np.log(np.array([0.0031, 0.1, 0.0015]))
+    c_small_fail_2 = np.log(np.array([1.0, 0.0031, 0.1, 0.0015]))
     # Violates total conc
-    c_small_fail_3 = np.log(np.array([0.02, 0.2, 0.002]))
+    c_small_fail_3 = np.log(np.array([1.0, 0.02, 0.2, 0.002]))
     # Violates limits
-    c_small_fail_4 = np.log(np.array([0.002, 0.1, 0.0001]))
+    c_small_fail_4 = np.log(np.array([1.0, 0.002, 0.1, 0.0001]))
     # Violates everything
-    c_small_fail_5 = np.log(np.array([0.00001, 0.5, 0.5]))
+    c_small_fail_5 = np.log(np.array([1.0, 0.00001, 0.5, 0.5]))
     ratio_lim_small = np.log(np.array([[0.01, 0.03]]))
-    ratio_mat_small = np.array([[1,-1,0]]).transpose()
-    max_tot_c_test = 0.11
+    ratio_mat_small = np.array([[0,1,-1,0]]).transpose()
+    max_tot_c_test = 0.11 + 1
     c_lim_test = np.log(np.array([
+        [1.0, 1.0],
         [0.001, 0.01],
         [0.05, 0.2],
         [0.001, 0.03]
@@ -274,7 +304,35 @@ def test_is_feasible(RT=RT):
         max_tot_c_test, c_lim_test
     )
 
-def to_do_1():
+def test_random_direction():
+    # Sample 1000 times
+    prev = random_direction(c_lim)
+    for i in range(0,1000):
+        # Pick random direction
+        random_dir = random_direction(c_lim)
+        # Check direction is zero for fixed concentrations
+        assert not np.count_nonzero(random_dir[c_lim[:,0] == c_lim[:,1]])
+        # Check that they are not stuck
+        assert not np.array_equal(random_dir, c_lim)
+        # Check that they change between rounds
+        assert not np.array_equal(prev, random_dir)
+        prev = random_dir.copy()
+
+def test_generate_feasible_c():
+    prev = generate_feasible_c(g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim)
+    for i in range(0,1000):
+        # Generate feasible concentrations
+        c = generate_feasible_c(
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+        )
+        # Make sure result is feasible
+        assert is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim)
+        # Check that they change between rounds
+        assert not np.array_equal(prev, c)
+        # Make copy for comparison in next round
+        prev = c.copy()
+
+def test_unstick_direction():
     # Checking that hard limits are fine
     negative = []
     positive = []
@@ -282,51 +340,144 @@ def to_do_1():
         cn = generate_feasible_c(
             g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
         )
-        dn = random_direction(cn)
+        dn = random_direction(c_lim)
         dn = unstick_direction(cn, dn, c_lim)
         theta = calculate_theta_hard_limit(cn, dn, c_lim)
         negative.append(
-            not limits_ok(cn + dn * (theta[0] - 1e-7)) and
-            not limits_ok(cn + dn * (theta[1] + 1e-7))
+            not limits_ok(cn + dn * (theta[0] - 1e-7), c_lim) and
+            not limits_ok(cn + dn * (theta[1] + 1e-7), c_lim)
         )
         positive.append(
-            limits_ok(cn + dn * theta[0]) and limits_ok(cn + dn * theta[1])
+            limits_ok(cn + dn * theta[0], c_lim) and \
+            limits_ok(cn + dn * theta[1], c_lim)
         )
-    # Seems to be ok
+    # Assert that negative and positive are fine
+    assert sum(negative) == len(negative)
+    assert sum(positive) == len(positive)
 
-def to_do_2():
-    # Create concentration datasets where one metabolite straddles the limit
-    c_lim_extreme_low = np.copy(c_lim)
-    c_lim_extreme_low[1,1] = c_lim_extreme_low[1,0] # Bind 2nd low
-    c_extreme_low = generate_feasible_c(
-        g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim_extreme_low
+    for i in range(0, 100):
+
+        # Create concentration datasets where one metabolite straddles the limit
+        c_lim_extreme_low = np.copy(c_lim)
+        c_lim_extreme_low[1,1] = c_lim_extreme_low[1,0] # Bind 2nd low
+        c_extreme_low = generate_feasible_c(
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim_extreme_low
+        )
+
+        c_lim_extreme_high = np.copy(c_lim)
+        c_lim_extreme_high[5,0] = c_lim_extreme_high[5,1] # Bind 6th high
+        c_extreme_high = generate_feasible_c(
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim_extreme_high
+        )
+
+        c_lim_extreme_duo_same = np.copy(c_lim)
+        c_lim_extreme_duo_same[2,0] = c_lim_extreme_duo_same[2,1] # Bind 3rd high
+        c_lim_extreme_duo_same[5,0] = c_lim_extreme_duo_same[5,1] # Bind 6th high
+        c_extreme_duo_same = generate_feasible_c(
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim_extreme_duo_same
+        )
+
+        c_lim_extreme_duo_diff = np.copy(c_lim)
+        c_lim_extreme_duo_diff[1,1] = c_lim_extreme_duo_diff[1,0] # Bind 2nd low
+        c_lim_extreme_duo_diff[5,0] = c_lim_extreme_duo_diff[5,1] # Bind 6th high
+        c_extreme_duo_diff = generate_feasible_c(
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim_extreme_duo_diff
+        )
+
+        # Create a random direction
+        direction = random_direction(c_lim)
+
+        # Ensure a small step is possible in one direction
+        def small_step(c):
+            unstuck_direction = unstick_direction(c, direction, c_lim)
+            dir_pos = is_feasible(
+                c + 1e-9*unstuck_direction,
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+            )
+            dir_neg = is_feasible(
+                c - 1e-9*unstuck_direction,
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+            )
+            return dir_pos or dir_neg
+
+        assert small_step(c_extreme_low)
+        assert small_step(c_extreme_high)
+        assert small_step(c_extreme_duo_same)
+        assert small_step(c_extreme_duo_diff)
+
+def test_calculate_theta_hard_limit():
+    for i in range(0, 1000):
+        c = generate_feasible_c(
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+        )
+        direction = random_direction(c_lim)
+        hard_theta = calculate_theta_hard_limit(c, direction, c_lim)
+        # At limits should be OK
+        assert limits_ok(c + hard_theta[0]*direction, c_lim)
+        assert limits_ok(c + hard_theta[1]*direction, c_lim)
+        # Within limits should be OK
+        assert limits_ok(
+            c + (hard_theta[0] + 1e-6*np.abs(hard_theta[0]))*direction, c_lim
+        )
+        assert limits_ok(
+            c + (hard_theta[1] - 1e-6*np.abs(hard_theta[1]))*direction, c_lim
+        )
+        # Beyond limits should NOT be OK
+        assert not limits_ok(
+            c + (hard_theta[0] - 1e-6*np.abs(hard_theta[0]))*direction, c_lim
+        )
+        assert not limits_ok(
+            c + (hard_theta[1] + 1e-6*np.abs(hard_theta[1]))*direction, c_lim
+        )
+
+def test_theta_range():
+    for i in range(0, 1000):
+        c = generate_feasible_c(
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+        )
+        direction = random_direction(c_lim)
+        t = theta_range(
+            c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+            c_lim, direction, precision=1e-3
+        )
+        for x in np.linspace(t[0], t[1], 50):
+            assert is_feasible(
+                c + x*direction,
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+            )
+
+def test_hit_and_run():
+    # Check that MDF concentrations are feasible
+    assert is_feasible(c_mdf, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim)
+    # Get feasible metabolite concentration sets starting from MDF
+    fMCSs = hit_and_run(
+        c_mdf, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+        c_lim, n_samples=50000, precision=1e-3
     )
-
-    c_lim_extreme_high = np.copy(c_lim)
-    c_lim_extreme_high[5,0] = c_lim_extreme_high[5,1] # Bind 5th high
-    c_extreme_high = generate_feasible_c(
-        g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim_extreme_high
-    )
-
-    c_lim_extreme_duo_same = np.copy(c_lim)
-    c_lim_extreme_duo_same[1,0] = c_lim_extreme_duo_same[1,1] # Bind 2nd low
-    c_lim_extreme_duo_same[5,0] = c_lim_extreme_duo_same[5,1] # Bind 5th high
-    c_extreme_duo_same = generate_feasible_c(
-        g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim_extreme_duo_same
-    )
-
-    c_lim_extreme_duo_diff = np.copy(c_lim)
-    c_lim_extreme_duo_diff[1,1] = c_lim_extreme_duo_diff[1,0] # Bind 2nd low
-    c_lim_extreme_duo_diff[5,0] = c_lim_extreme_duo_diff[5,1] # Bind 5th high
-    c_extreme_duo_diff = generate_feasible_c(
-        g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim_extreme_duo_diff
-    )
-
-    # Select extreme low or extreme high for testing
-    c = np.copy(c_extreme_low)
-    c = np.copy(c_extreme_high)
-    c = np.copy(c_extreme_duo_same)
-    c = np.copy(c_extreme_duo_diff)
-
-    # Create a random direction
-    direction = random_direction(c, c_lim)
+    # Check that each fMCS is feasible
+    for i in range(len(fMCSs)):
+        assert is_feasible(
+            fMCSs[i],
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+        )
+        # Check that the fMCSs are different
+        if i > 0:
+            assert not np.array_equal(fMCSs[i-1], fMCSs[i])
+    # Generate fMCSs from several starting points
+    for i in range(0, 1000):
+        c = generate_feasible_c(
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+        )
+        fMCSs = hit_and_run(
+            c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+            c_lim, n_samples=50, precision=1e-3
+        )
+        # Check that all fMCSs are feasible
+        for i in range(len(fMCSs)):
+            assert is_feasible(
+                fMCSs[i],
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+            )
+            # Check that the fMCSs are different
+            if i > 0:
+                assert not np.array_equal(fMCSs[i-1], fMCSs[i])

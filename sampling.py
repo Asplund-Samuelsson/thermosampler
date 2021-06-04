@@ -48,9 +48,9 @@ def is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim):
     return sum(ok) == len(ok)
 
 # Define function for selecting a random direction
-def random_direction(c, c_lim):
+def random_direction(c_lim):
     # Create a random vector of the same length as c
-    direction = np.array([np.random.random() for n in range(0, c.shape[0])])
+    direction = np.array([np.random.random() for n in range(0, c_lim.shape[0])])
     # Subtract 0.5 to introduce negative directions
     direction = direction - 0.5
     # Set fixed concentration direction to zero
@@ -143,14 +143,17 @@ def theta_range(
 # Define function for performing hit-and-run sampling within the solution space
 def hit_and_run(
     c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-    c_lim, direction, n_samples, precision=1e-3
+    c_lim, n_samples, precision=1e-3
     ):
     # Set up concentration storage list
     fMCSs = [c]
     # Perform n steps
     for i in range(0, n_samples - 1):
         # Generate random direction
-        direction = random_direction(c, c_lim)
+        direction = random_direction(c_lim)
+        # If it is the first step, unstick the direction
+        if i == 0:
+            direction = unstick_direction(c, direction, c_lim)
         # Determine minimum and maximum step length
         theta = theta_range(
             c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
