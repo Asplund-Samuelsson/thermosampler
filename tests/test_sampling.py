@@ -174,6 +174,10 @@ def test_df_ok(RT=RT):
     assert df_ok(c_small, g_small, RT, S_small)
     assert not df_ok(c_small, np.array(list(reversed(g_small))), RT, S_small)
     assert not df_ok(c_small_fail, g_small, RT, S_small)
+    # Ensure MDF concentration set is close to MDF
+    assert df_ok(c_mdf, g, RT, S)
+    assert df_ok(c_mdf, g, RT, S, mdf=1.3066570043)
+    assert not df_ok(c_mdf, g, RT, S, mdf=1.306658)
 
 def test_ratios_ok(ratio_lim=ratio_lim, ratio_mat=ratio_mat):
     # Check ratios in middle

@@ -19,11 +19,11 @@ def random_c(c_lim):
     return sample * (c_lim[:,1] - c_lim[:,0]) + c_lim[:,0]
 
 # Define function for checking if set is thermodynamically feasible
-def df_ok(c, g, RT, S):
+def df_ok(c, g, RT, S, mdf=0):
     # Calculate delta G prime
     df = -(g + RT * np.sum(np.transpose(S) * c, 1))
-    # Check if all driving forces higher than 0
-    return sum(df > 0) == df.shape[0]
+    # Check if all driving forces higher than the minimum driving force
+    return sum(df > mdf) == df.shape[0]
 
 # Define function for checking if set has acceptable ratios
 def ratios_ok(c, ratio_lim, ratio_mat):
@@ -44,11 +44,11 @@ def limits_ok(c, c_lim):
     return min and max
 
 # Define function for checking feasibility, ratios, sum, and limits in one go
-def is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim):
+def is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf=0):
     # Run all feasibility tests
     ok = [
-        # Driving forces positive
-        df_ok(c, g, RT, S),
+        # Driving forces above minimum
+        df_ok(c, g, RT, S, mdf),
         # Concentration ratios within bounds
         ratios_ok(c, ratio_lim, ratio_mat),
         # Concentration sum below max
@@ -72,9 +72,13 @@ def random_direction(c_lim):
     return normalized_direction
 
 # Define function to generate one feasible metabolite concentration set
-def generate_feasible_c(g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim):
+def generate_feasible_c(
+        g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf=0
+    ):
     c = random_c(c_lim) # Initialize c
-    while not is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim):
+    while not is_feasible(
+        c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf
+    ):
         c = random_c(c_lim) # Generate new c until feasible
     return c
 
@@ -118,13 +122,13 @@ def calculate_theta_hard_limit(c, direction, c_lim):
 # Define function for determining minimum and maximum step length (theta)
 def theta_range(
     c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-    c_lim, direction, precision=1e-3
+    c_lim, direction, precision=1e-3, mdf=0
     ):
     # Define function for honing in on a theta limit
     def hone_theta(theta_outer, theta_inner=0):
         if is_feasible(
             c + theta_outer * direction, g, RT, S, ratio_lim, ratio_mat,
-            max_tot_c, c_lim
+            max_tot_c, c_lim, mdf
             ):
             # If the outer theta is feasible, accept that solution
             theta_inner = theta_outer
@@ -134,7 +138,7 @@ def theta_range(
                 theta_cur = (theta_outer + theta_inner) / 2
                 if is_feasible(
                     c + theta_cur * direction, g, RT, S, ratio_lim, ratio_mat,
-                    max_tot_c, c_lim
+                    max_tot_c, c_lim, mdf
                     ):
                     # Move outwards, set inner limit to current theta
                     theta_inner = theta_cur
@@ -155,7 +159,7 @@ def theta_range(
 # Define function for performing hit-and-run sampling within the solution space
 def hit_and_run(
     c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-    c_lim, n_samples, precision=1e-3
+    c_lim, n_samples, precision=1e-3, mdf=0
     ):
     # Set up concentration storage list
     fMCSs = [c]
@@ -169,14 +173,16 @@ def hit_and_run(
         # Determine minimum and maximum step length
         theta = theta_range(
             c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-            c_lim, direction, precision=1e-3
+            c_lim, direction, precision, mdf
         )
         # Perform a random sampling of the step length
         theta = theta[0] + np.random.random() * (theta[1] - theta[0])
         # Perform step
         c = c + theta * direction
         # Ensure feasibility
-        if not is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim):
+        if not is_feasible(
+                c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf
+            ):
             print("Warning: Infeasible point reached.")
             break
         # Store concentration
@@ -228,7 +234,7 @@ def read_concentrations(c_text):
 def main(
         reaction_file, std_drG_file, outfile_name, cons_file, ratio_cons_file,
         max_tot_c, n_samples, n_starts=1, c_file = None,
-        T=298.15, R=8.31e-3, proton_name='C00080', precision=1e-3
+        T=298.15, R=8.31e-3, proton_name='C00080', precision=1e-3, mdf=0
     ):
 
     sWrite("\nLoading data...")
@@ -276,7 +282,7 @@ def main(
             hit_and_run(
                 np.log(c_pd.iloc[:,i].to_numpy()),
                 g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-                c_lim, n_samples, precision
+                c_lim, n_samples, precision, mdf
             ) \
             for i in range(c_pd.shape[1])
         ]
@@ -285,7 +291,7 @@ def main(
             hit_and_run(
                 generate_feasible_c(g,RT,S,ratio_lim,ratio_mat,max_tot_c,c_lim),
                 g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-                c_lim, n_samples, precision
+                c_lim, n_samples, precision, mdf
             )\
             for i in range(n_starts)
         ]
@@ -359,12 +365,16 @@ if __name__ == "__main__":
         )
     parser.add_argument(
         '--precision', type=float, default=1e-3,
-        help='Precision of step size calculation (defaul 1e-3).'
+        help='Precision of step size calculation (default 1e-3).'
+        )
+    parser.add_argument(
+        '--mdf', type=float, default=0,
+        help='Minimum driving force (default 0).'
         )
     args = parser.parse_args()
     main(
         args.reactions, args.std_drG, args.outfile, args.constraints,
-        args.ratios, args.max_conc, args.steps, n_starts=args.starts,
-        c_file = args.concs, T=args.T, R=args.R, proton_name=args.proton_name,
-        precision=args.precision
+        args.ratios, args.max_conc, args.steps, args.starts,
+        args.concs, args.T, args.R, args.proton_name,
+        args.precision, args.mdf
     )
