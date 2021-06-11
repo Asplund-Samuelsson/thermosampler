@@ -51,3 +51,6 @@ examples/tca.model_drgs.tab results/tca_mdf.csv
 --constraints examples/tca.concentrations.tab \
 --concs results/tca_mdf.csv --steps 1000 --mdf 1.3
 ```
+
+### Author
+Johannes Asplund-Samuelsson, KTH (johannes.asplund.samuelsson@scilifelab.se)
