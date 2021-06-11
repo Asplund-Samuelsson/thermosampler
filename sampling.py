@@ -1,5 +1,17 @@
+#!/usr/bin/env python3
+
 # Import libraries
 import numpy as np
+import pandas as pd
+import collections
+import argparse
+import re
+import sys, os
+
+# Import functions from MDF script
+from mdf import parse_equation, read_reactions, read_reaction_drGs
+from mdf import read_constraints, sWrite, sError
+from mdf import read_ratio_constraints
 
 # Define function for random sampling of concentrations
 def random_c(c_lim):
@@ -171,3 +183,188 @@ def hit_and_run(
         fMCSs.append(c)
     # Return list of concentrations
     return fMCSs
+
+def make_ratio_mat(ratio_constraints, S_pd):
+    # Prepare ratio matrix of correct shape with only zeros
+    rat_mat = np.zeros((S_pd.shape[0], ratio_constraints.shape[0]))
+    # Iterate over ratio indices
+    for rat_i in ratio_constraints.index:
+        # Add the numerator
+        rat_mat[
+            np.where(S_pd.index == ratio_constraints['cpd_id_num'][rat_i]),
+            rat_i
+        ] = 1
+        # Add the denominator
+        rat_mat[
+            np.where(S_pd.index == ratio_constraints['cpd_id_den'][rat_i]),
+            rat_i
+        ] = -1
+    # Return finished ratio matrix
+    return rat_mat
+
+def read_concentrations(c_text):
+    if "," in c_text:
+        # Parse MDF table (metabolite columns)
+        c_text = [x.split(',') for x in c_text.strip().split("\n")]
+        i = np.where([x.startswith('c_') for x in c_text[0]])[0]
+        concentrations = pd.DataFrame(dict(zip(
+            ['Conc' + str(x) for x in range(1,len(c_text))],
+            [[float(c_text[r][c]) for c in i] for r in range(1,len(c_text))]
+        )))
+        concentrations.index = [c_text[0][x].strip('c_') for x in i]
+    else:
+        # Parse tab-delimited table (metabolite rows)
+        c_text = [x.split('\t') for x in c_text.strip().split("\n")]
+        concentrations = pd.DataFrame(dict(zip(
+            ['Conc' + str(x) for x in range(1,len(c_text[0]))],
+            map(list, zip(*[
+                [float(y) for y in c_text[x][1:]] for x in range(len(c_text))
+            ]))
+        )))
+        concentrations.index = [c_text[x][0] for x in range(len(c_text))]
+    return concentrations
+
+# Main code block
+def main(
+        reaction_file, std_drG_file, outfile_name, cons_file, ratio_cons_file,
+        max_tot_c, n_samples, n_starts=1, c_file = None,
+        T=298.15, R=8.31e-3, proton_name='C00080', precision=1e-3
+    ):
+
+    sWrite("\nLoading data...")
+
+    RT = R*T
+
+    # Load stoichiometric matrix
+    S_pd = read_reactions(open(reaction_file, 'r').read(), proton_name)
+    S = S_pd.to_numpy()
+
+    # Load standard reaction Gibbs energies
+    std_drGs = read_reaction_drGs(open(std_drG_file, 'r').read())
+    std_drGs.index = std_drGs['rxn_id']
+    std_drGs = std_drGs.reindex(S_pd.columns.values)
+    g = std_drGs['drG'].to_numpy()
+
+    # Load concentration constraints
+    constraints = read_constraints(open(cons_file, 'r').read())
+    constraints.index = constraints['cpd_id']
+    constraints = constraints.reindex(S_pd.index.values)
+    c_lim = np.log(constraints[['x_min', 'x_max']].to_numpy())
+
+    # Load concentration ratio constraints
+    if ratio_cons_file:
+        ratio_cons_text = open(ratio_cons_file, 'r').read()
+    else:
+        ratio_cons_text = ''
+    ratio_constraints = read_ratio_constraints(ratio_cons_text)
+    ratio_mat = make_ratio_mat(ratio_constraints, S_pd)
+    ratio_lim = np.log(ratio_constraints[['ratio','ratio_upper']].to_numpy())
+
+    # Load concentrations
+    if not c_file:
+        c_loaded = False
+    else:
+        c_loaded = True
+        c_pd = read_concentrations(open(c_file, 'r').read())
+        c_pd = c_pd.reindex(S_pd.index.values)
+
+    sWrite(" Done.\n")
+
+    sWrite("Performing hit-and-run sampling...")
+    if c_loaded:
+        fMCSs = [
+            hit_and_run(
+                np.log(c_pd.iloc[:,i].to_numpy()),
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+                c_lim, n_samples, precision
+            ) \
+            for i in range(c_pd.shape[1])
+        ]
+    else:
+        fMCSs = [
+            hit_and_run(
+                generate_feasible_c(g,RT,S,ratio_lim,ratio_mat,max_tot_c,c_lim),
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+                c_lim, n_samples, precision
+            )\
+            for i in range(n_starts)
+        ]
+    sWrite(" Done.\n")
+
+    # Save data to outfile
+    outfile = open(outfile_name, 'w')
+    header = 'Run\tfMCS\t' + "\t".join(S_pd.index.values) + "\n"
+    junk = outfile.write(header)
+    r = 0
+    for run in fMCSs:
+        f = 0
+        for fMCS in run:
+            fMCS_string = "\t".join([str(x) for x in fMCS])
+            output = "\t".join([str(r), str(f)]) + "\t" + fMCS_string + "\n"
+            junk = outfile.write(output)
+            f += 1
+        r +=1
+
+    outfile.close()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--reactions', type=str, required=True,
+        help='Load reactions.'
+        )
+    parser.add_argument(
+        '--std_drG', type=str, required=True,
+        help='Load standard reaction Gibbs energies.'
+        )
+    parser.add_argument(
+        '--outfile', type=str, required=True,
+        help='Write fMCSs table in tab-delimited format.'
+        )
+    parser.add_argument(
+        '--constraints', type=str, required=True,
+        help='Load concentration bound constraints.'
+        )
+    parser.add_argument(
+        '--ratios', type=str, default=None,
+        help='Load concentration ratio constraints.'
+        )
+    parser.add_argument(
+        '--concs', type=str, default=None,
+        help='Load start concentrations in tab or MDF csv format (optional).'
+        )
+    parser.add_argument(
+        '--steps', type=int, default=1000,
+        help="Number of hit-and-run steps."
+        )
+    parser.add_argument(
+        '--starts', type=int, default=1,
+        help="Number of starts if no starting concentrations (default 1)."
+        )
+    parser.add_argument(
+        '-T', type=float, default=298.15,
+        help='Temperature (K).'
+        )
+    parser.add_argument(
+        '-R', type=float, default=8.31e-3,
+        help='Universal gas constant (kJ/(mol*K)).'
+        )
+    parser.add_argument(
+        '--proton_name', default='C00080',
+        help='Name used to identify protons.'
+        )
+    parser.add_argument(
+        '--max_conc', type=float, default=1.05,
+        help='Maximum total concentration (M).'
+        )
+    parser.add_argument(
+        '--precision', type=float, default=1e-3,
+        help='Precision of step size calculation (defaul 1e-3).'
+        )
+    args = parser.parse_args()
+    main(
+        args.reactions, args.std_drG, args.outfile, args.constraints,
+        args.ratios, args.max_conc, args.steps, n_starts=args.starts,
+        c_file = args.concs, T=args.T, R=args.R, proton_name=args.proton_name,
+        precision=args.precision
+    )
