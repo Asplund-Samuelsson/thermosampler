@@ -5,7 +5,7 @@ Linear programming and Markov Chain Monte Carlo sampling tools for thermodynamic
 ### MDF and NEM analysis
 
 `mdf.py` performs Max-min Driving Force (MDF; [Noor _et al._, 2014](http://doi.org/10.1371/journal.pcbi.1003483)) and Network-Embedded
-MDF (NEM) analysis.
+MDF (NEM) analysis. Run `./mdf.py -h` to list all options of the script.
 
 ##### _Example: NEM analysis on lysine biosynthesis in_ E. coli _and_ Synechocystis
 
@@ -40,7 +40,7 @@ examples/tca.model_drgs.tab results/tca_mdf.csv
 
 ### Hit-and-run analysis
 
-`sampling.py` performs hit-and-run sampling of feasible metabolite concentration sets by a random walk through the solution space.
+`sampling.py` performs hit-and-run sampling of feasible metabolite concentration sets by a random walk through the solution space. Run `./sampling.py -h` to list all options of the script.
 
 ##### _Example: Hit-and-run sampling on TCA cycle starting from and maintaining MDF_
 
@@ -50,6 +50,14 @@ examples/tca.model_drgs.tab results/tca_mdf.csv
 --outfile results/tca.mdf_sampling.tab \
 --constraints examples/tca.concentrations.tab \
 --concs results/tca_mdf.csv --steps 1000 --mdf 1.3
+```
+
+### Convert reaction table to stoichiometric matrix
+
+`stoich.py` converts a model in reaction table format to a model in stoichiometric matrix format. Run `./stoich.py -h` to list all options of the script.
+
+```
+./stoich.py examples/tca.model.tab results/tca.stoich.tab
 ```
 
 ### Author
