@@ -1,0 +1,5 @@
+po_NADH	po_NAD	0.1
+po_NADPH	po_NADP	10
+po_Fd_red	po_Fd_ox	40
+hm_Fd_red	hm_Fd_ox	1
+ac_Fd_red	ac_Fd_ox	10
