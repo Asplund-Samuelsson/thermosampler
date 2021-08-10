@@ -20,6 +20,7 @@ po_aceT	po_acetate <=> acetate_out
 hm_Eha	Na_out + H2 + 2 hm_Fd_ox <=> hm_Na + 2 hm_Fd_red
 hm_ATPS	Na_out + hm_ADP + hm_Pi <=> hm_Na + hm_ATP + H2O
 hm_Fru	H2 + hm_F420 <=> hm_F420H2
+hm_Fdh1	hm_formate + hm_F420 <=> CO2 + hm_F420H2
 hm_frmT	formate_out <=> hm_formate
 hm_HdrH	2 H2 + hm_CoMSSCoB + 2 hm_Fd_ox <=> hm_HSCoB + hm_HSCoM + 2 hm_Fd_red
 hm_HdrF	2 hm_formate + hm_CoMSSCoB + 2 hm_Fd_ox <=> 2 CO2 + hm_HSCoB + hm_HSCoM + 2 hm_Fd_red
