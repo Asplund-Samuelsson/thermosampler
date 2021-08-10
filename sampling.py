@@ -159,7 +159,7 @@ def theta_range(
 # Define function for performing hit-and-run sampling within the solution space
 def hit_and_run(
     c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-    c_lim, n_samples, precision=1e-3, mdf=0
+    c_lim, n_samples, precision=1e-3, mdf=0, n=1
     ):
     # Set up concentration storage list
     fMCSs = [c]
@@ -185,8 +185,9 @@ def hit_and_run(
             ):
             print("Warning: Infeasible point reached.")
             break
-        # Store concentration
-        fMCSs.append(c)
+        # Store concentration if the step is correct
+        if (i + 1) % n == 0:
+            fMCSs.append(c)
     # Return list of concentrations
     return fMCSs
 
@@ -234,7 +235,7 @@ def read_concentrations(c_text):
 def main(
         reaction_file, std_drG_file, outfile_name, cons_file, ratio_cons_file,
         max_tot_c, n_samples, n_starts=1, c_file = None,
-        T=298.15, R=8.31e-3, proton_name='C00080', precision=1e-3, mdf=0
+        T=298.15, R=8.31e-3, proton_name='C00080', precision=1e-3, mdf=0, n=1
     ):
 
     sWrite("\nLoading data...")
@@ -282,7 +283,7 @@ def main(
             hit_and_run(
                 np.log(c_pd.iloc[:,i].to_numpy()),
                 g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-                c_lim, n_samples, precision, mdf
+                c_lim, n_samples, precision, mdf, n
             ) \
             for i in range(c_pd.shape[1])
         ]
@@ -291,7 +292,7 @@ def main(
             hit_and_run(
                 generate_feasible_c(g,RT,S,ratio_lim,ratio_mat,max_tot_c,c_lim),
                 g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-                c_lim, n_samples, precision, mdf
+                c_lim, n_samples, precision, mdf, n
             )\
             for i in range(n_starts)
         ]
@@ -308,7 +309,7 @@ def main(
             fMCS_string = "\t".join([str(x) for x in fMCS])
             output = "\t".join([str(r), str(f)]) + "\t" + fMCS_string + "\n"
             junk = outfile.write(output)
-            f += 1
+            f += n
         r +=1
 
     outfile.close()
@@ -371,10 +372,14 @@ if __name__ == "__main__":
         '--mdf', type=float, default=0,
         help='Minimum driving force (default 0).'
         )
+    parser.add_argument(
+        '-n', type=int, default=1,
+        help="Save every nth step of the random walk (default 1)."
+    )
     args = parser.parse_args()
     main(
         args.reactions, args.std_drG, args.outfile, args.constraints,
         args.ratios, args.max_conc, args.steps, args.starts,
         args.concs, args.T, args.R, args.proton_name,
-        args.precision, args.mdf
+        args.precision, args.mdf, args.n
     )

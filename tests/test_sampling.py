@@ -450,7 +450,7 @@ def test_theta_range():
                 g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
             )
 
-def test_hit_and_run():
+def test_hit_and_run_1():
     # Check that MDF concentrations are feasible
     assert is_feasible(c_mdf, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim)
     # Get feasible metabolite concentration sets starting from MDF
@@ -485,6 +485,32 @@ def test_hit_and_run():
             # Check that the fMCSs are different
             if i > 0:
                 assert not np.array_equal(fMCSs[i-1], fMCSs[i])
+
+def test_hit_and_run_2():
+    # Check that it is possible to save only every nth set
+    c = generate_feasible_c(
+        g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+    )
+    np.random.seed(42)
+    fMCSs = hit_and_run(
+        c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+        c_lim, n_samples=50, precision=1e-3
+    )
+    np.random.seed(42)
+    fMCSs_2 = hit_and_run(
+        c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+        c_lim, n_samples=50, precision=1e-3, n=2
+    )
+    np.random.seed(42)
+    fMCSs_10 = hit_and_run(
+        c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+        c_lim, n_samples=50, precision=1e-3, n=10
+    )
+    assert (len(fMCSs), len(fMCSs_2), len(fMCSs_10)) == (50, 25, 5)
+    for i in range(0,25):
+        np.testing.assert_array_equal(fMCSs_2[i], fMCSs[i*2])
+    for i in range(0,5):
+        np.testing.assert_array_equal(fMCSs_10[i], fMCSs[i*10])
 
 def test_make_ratio_mat():
     S_pd = read_reactions(
