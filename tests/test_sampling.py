@@ -506,10 +506,10 @@ def test_hit_and_run_2():
         c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
         c_lim, n_samples=50, precision=1e-3, n=10
     )
-    assert (len(fMCSs), len(fMCSs_2), len(fMCSs_10)) == (50, 25, 5)
-    for i in range(0,25):
+    assert (len(fMCSs), len(fMCSs_2), len(fMCSs_10)) == (51, 26, 6)
+    for i in range(0,26):
         np.testing.assert_array_equal(fMCSs_2[i], fMCSs[i*2])
-    for i in range(0,5):
+    for i in range(0,6):
         np.testing.assert_array_equal(fMCSs_10[i], fMCSs[i*10])
 
 def test_make_ratio_mat():

@@ -164,7 +164,7 @@ def hit_and_run(
     # Set up concentration storage list
     fMCSs = [c]
     # Perform n steps
-    for i in range(0, n_samples - 1):
+    for i in range(0, n_samples):
         # Generate random direction
         direction = random_direction(c_lim)
         # If it is the first step, unstick the direction
