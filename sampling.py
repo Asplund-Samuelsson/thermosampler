@@ -41,15 +41,12 @@ def sums_ok(c, c_sums):
     # If there are no concentration sum constraints, return True
     if c_sums is None:
         return True
-    # Add metabolite concentrations to sums table
-    c_x = c_sums.copy()
-    c_x['cpd_conc'] = np.exp(c[c_x['cpd_index']])
-    # Calculate group sums
-    c_x = c_x.drop(['cpd_index'], axis=1)
-    c_x = c_x.groupby(['cpd_group', 'group_sum']).sum()
-    c_x = c_x.reset_index()
-    # Check that no sum is too large
-    return not False in list(c_x['cpd_conc'] <= c_x['group_sum'])
+    # Check sum of each group
+    for i in c_sums[0].keys():
+        if np.sum(np.exp(c[list(c_sums[0][i])])) > c_sums[1][i]:
+            return False
+    # If all groups passed, return True
+    return True
 
 # Define function that checks concentrations are within limits
 def limits_ok(c, c_lim):
@@ -263,6 +260,25 @@ def read_sums(sums_text, S_pd):
     # Convert group and sum to int and float
     c_sums.loc[:,'cpd_group'] = pd.to_numeric(c_sums['cpd_group'])
     c_sums.loc[:,'group_sum'] = pd.to_numeric(c_sums['group_sum'])
+    # Error and terminate if more than one sum per group
+    c_sums_grouped = c_sums.drop('cpd_index', axis=1).groupby('cpd_group')
+    c_sums_check = c_sums_grouped.agg(lambda x: len(set(x)))['group_sum']
+    for x in c_sums_check.tolist():
+        if x > 1:
+            sError("\nError: More than one concentration sum per group.\n")
+            exit()
+    # Modify concentration sums table to be more lean
+    c_groups = {}
+    for i in range(c_sums.shape[0]):
+        cpd_index = c_sums['cpd_index'].tolist()[i]
+        try:
+            c_groups[c_sums['cpd_group'].tolist()[i]].add(cpd_index)
+        except KeyError:
+            c_groups[c_sums['cpd_group'].tolist()[i]] = {cpd_index}
+    c_sums = (
+        c_groups,
+        dict(zip(c_sums['cpd_group'].tolist(), c_sums['group_sum'].tolist()))
+    )
     return c_sums
 
 # Main code block

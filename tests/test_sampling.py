@@ -161,6 +161,20 @@ c_sums = pd.DataFrame({
     ]
 })
 
+# Modify concentration sums table to be more lean
+c_groups = {}
+for i in range(c_sums.shape[0]):
+    cpd_index = c_sums['cpd_index'].tolist()[i]
+    try:
+        c_groups[c_sums['cpd_group'].tolist()[i]].add(cpd_index)
+    except KeyError:
+        c_groups[c_sums['cpd_group'].tolist()[i]] = {cpd_index}
+
+c_sums = (
+    c_groups,
+    dict(zip(c_sums['cpd_group'].tolist(), c_sums['group_sum'].tolist()))
+)
+
 # Define tests
 def test_random_c(c_lim=c_lim):
     # Sample 1000 times and make sure the data is new and not out of bounds
@@ -258,20 +272,28 @@ def test_sums_ok():
     assert sums_ok(c_mdf, c_sums)
     # Check situations where the sum is too high
     # Serial group bad
-    c_sums_bad_1 = c_sums.copy()
-    c_sums_bad_1.loc[[7,8],'group_sum'] = 0.0009
+    c_sums_bad_1 = (
+        {1: {0}, 2: {1, 2, 3, 5}, 3: {9, 4}, 4: {18, 19}, 5: {3, 4}},
+        {1: 1.0, 2: 0.015, 3: 0.001, 4: 0.0009, 5: 0.0006}
+    )
     assert not sums_ok(c_mdf, c_sums_bad_1)
     # Split group bad
-    c_sums_bad_2 = c_sums.copy()
-    c_sums_bad_2.loc[[4,6],'group_sum'] = 0.0001
+    c_sums_bad_2 = (
+        {1: {0}, 2: {1, 2, 3, 5}, 3: {9, 4}, 4: {18, 19}, 5: {3, 4}},
+        {1: 1.0, 2: 0.015, 3: 0.0001, 4: 0.00101, 5: 0.0006}
+    )
     assert not sums_ok(c_mdf, c_sums_bad_2)
     # Single metabolite bad
-    c_sums_bad_3 = c_sums.copy()
-    c_sums_bad_3.loc[0,'group_sum'] = 0.1
+    c_sums_bad_3 = (
+        {1: {0}, 2: {1, 2, 3, 5}, 3: {9, 4}, 4: {18, 19}, 5: {3, 4}},
+        {1: 0.1, 2: 0.015, 3: 0.001, 4: 0.00101, 5: 0.0006}
+    )
     assert not sums_ok(c_mdf, c_sums_bad_3)
     # All metabolites bad
-    c_sums_bad_4 = c_sums.copy()
-    c_sums_bad_4.loc[:,'group_sum'] = 0.0001
+    c_sums_bad_4 = (
+        {1: {0}, 2: {1, 2, 3, 5}, 3: {9, 4}, 4: {18, 19}, 5: {3, 4}},
+        {1: 0.0001, 2: 0.0001, 3: 0.0001, 4: 0.0001, 5: 0.0001}
+    )
     assert not sums_ok(c_mdf, c_sums_bad_4)
     # If feeding None to sums_ok, it should return True
     assert sums_ok(c_mdf, None)
@@ -717,4 +739,4 @@ def test_read_sums():
     ]) + '\n'
     S_pd = read_reactions(open('examples/tca.model.tab', 'r').read(), 'C00080')
     c_sums_test = read_sums(sums_text, S_pd)
-    pd.testing.assert_frame_equal(c_sums_test, c_sums)
+    assert c_sums_test == c_sums
