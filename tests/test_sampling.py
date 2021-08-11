@@ -145,6 +145,22 @@ c_mdf = np.log(np.array([
     0.0005000000  # C00399
 ]))
 
+# Concentration sums test table
+c_sums = pd.DataFrame({
+    # Metabolites
+    'cpd_index':[
+        0,1,2,3,4,5,9,18,19,4,3
+    ],
+    # Groups
+    'cpd_group':[
+        1,2,2,2,3,2,3,4,4,5,5
+    ],
+    # Sums (M)
+    'group_sum':[
+        1,0.015,0.015,0.015,0.001,0.015,0.001,0.00101,0.00101,0.0006,0.0006
+    ]
+})
+
 # Define tests
 def test_random_c(c_lim=c_lim):
     # Sample 1000 times and make sure the data is new and not out of bounds
@@ -238,6 +254,28 @@ def test_sum_ok():
     assert not sum_ok(c_fail, 0.04)
     assert sum_ok(np.array([0,-3]), 0.5 + 1)
 
+def test_sums_ok():
+    assert sums_ok(c_mdf, c_sums)
+    # Check situations where the sum is too high
+    # Serial group bad
+    c_sums_bad_1 = c_sums.copy()
+    c_sums_bad_1.loc[[7,8],'group_sum'] = 0.0009
+    assert not sums_ok(c_mdf, c_sums_bad_1)
+    # Split group bad
+    c_sums_bad_2 = c_sums.copy()
+    c_sums_bad_2.loc[[4,6],'group_sum'] = 0.0001
+    assert not sums_ok(c_mdf, c_sums_bad_2)
+    # Single metabolite bad
+    c_sums_bad_3 = c_sums.copy()
+    c_sums_bad_3.loc[0,'group_sum'] = 0.1
+    assert not sums_ok(c_mdf, c_sums_bad_3)
+    # All metabolites bad
+    c_sums_bad_4 = c_sums.copy()
+    c_sums_bad_4.loc[:,'group_sum'] = 0.0001
+    assert not sums_ok(c_mdf, c_sums_bad_4)
+    # If feeding None to sums_ok, it should return True
+    assert sums_ok(c_mdf, None)
+
 def test_limits_ok():
     c_lim_test = np.log(np.array(
         [[0.01,  0.1  ],
@@ -285,27 +323,31 @@ def test_is_feasible(RT=RT):
     ]))
     assert is_feasible(
         c_small, g_small, RT, S_small, ratio_lim_small, ratio_mat_small,
-        max_tot_c_test, c_lim_test
+        max_tot_c_test, c_lim_test, None
     )
     assert not is_feasible(
         c_small_fail_1, g_small, RT, S_small, ratio_lim_small, ratio_mat_small,
-        max_tot_c_test, c_lim_test
+        max_tot_c_test, c_lim_test, None
     )
     assert not is_feasible(
         c_small_fail_2, g_small, RT, S_small, ratio_lim_small, ratio_mat_small,
-        max_tot_c_test, c_lim_test
+        max_tot_c_test, c_lim_test, None
     )
     assert not is_feasible(
         c_small_fail_3, g_small, RT, S_small, ratio_lim_small, ratio_mat_small,
-        max_tot_c_test, c_lim_test
+        max_tot_c_test, c_lim_test, None
     )
     assert not is_feasible(
         c_small_fail_4, g_small, RT, S_small, ratio_lim_small, ratio_mat_small,
-        max_tot_c_test, c_lim_test
+        max_tot_c_test, c_lim_test, None
     )
     assert not is_feasible(
         c_small_fail_5, g_small, RT, S_small, ratio_lim_small, ratio_mat_small,
-        max_tot_c_test, c_lim_test
+        max_tot_c_test, c_lim_test, None
+    )
+    # Test with c_sums
+    assert is_feasible(
+        c_mdf, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, c_sums
     )
 
 def test_random_direction():
@@ -330,7 +372,9 @@ def test_generate_feasible_c():
             g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
         )
         # Make sure result is feasible
-        assert is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim)
+        assert is_feasible(
+            c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, None
+        )
         # Check that they change between rounds
         assert not np.array_equal(prev, c)
         # Make copy for comparison in next round
@@ -396,11 +440,11 @@ def test_unstick_direction():
             unstuck_direction = unstick_direction(c, direction, c_lim)
             dir_pos = is_feasible(
                 c + 1e-9*unstuck_direction,
-                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, None
             )
             dir_neg = is_feasible(
                 c - 1e-9*unstuck_direction,
-                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, None
             )
             return dir_pos or dir_neg
 
@@ -447,12 +491,14 @@ def test_theta_range():
         for x in np.linspace(t[0], t[1], 50):
             assert is_feasible(
                 c + x*direction,
-                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, None
             )
 
 def test_hit_and_run_1():
     # Check that MDF concentrations are feasible
-    assert is_feasible(c_mdf, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim)
+    assert is_feasible(
+        c_mdf, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, c_sums
+    )
     # Get feasible metabolite concentration sets starting from MDF
     fMCSs = hit_and_run(
         c_mdf, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
@@ -462,7 +508,7 @@ def test_hit_and_run_1():
     for i in range(len(fMCSs)):
         assert is_feasible(
             fMCSs[i],
-            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, None
         )
         # Check that the fMCSs are different
         if i > 0:
@@ -480,7 +526,7 @@ def test_hit_and_run_1():
         for i in range(len(fMCSs)):
             assert is_feasible(
                 fMCSs[i],
-                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim
+                g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, None
             )
             # Check that the fMCSs are different
             if i > 0:
@@ -511,6 +557,22 @@ def test_hit_and_run_2():
         np.testing.assert_array_equal(fMCSs_2[i], fMCSs[i*2])
     for i in range(0,6):
         np.testing.assert_array_equal(fMCSs_10[i], fMCSs[i*10])
+
+def test_hit_and_run_3():
+    # Ensure it is possible to sample with grouped sum constraints
+    fMCSs = hit_and_run(
+        c_mdf, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
+        c_lim, n_samples=1000, precision=1e-3, c_sums=c_sums
+    )
+    # Check that each fMCS is feasible
+    for i in range(len(fMCSs)):
+        assert is_feasible(
+            fMCSs[i],
+            g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, c_sums
+        )
+        # Check that the fMCSs are different
+        if i > 0:
+            assert not np.array_equal(fMCSs[i-1], fMCSs[i])
 
 def test_make_ratio_mat():
     S_pd = read_reactions(
@@ -638,3 +700,21 @@ def test_read_concentrations():
     pd.testing.assert_frame_equal(
         read_concentrations(concentrations_text_t_2), ex_con_t_2
     )
+
+def test_read_sums():
+    sums_text = "\n".join([
+        'C00001\t1\t1',
+        'C00002\t2\t0.015',
+        'C00003\t2\t0.015',
+        'C00004\t2\t0.015',
+        'C00008\t3\t0.001',
+        'C00009\t2\t0.015',
+        'C00026\t3\t0.001',
+        'C00399\t4\t0.00101',
+        'C00417\t4\t0.00101',
+        'C00008\t5\t0.0006',
+        'C00004\t5\t0.0006'
+    ]) + '\n'
+    S_pd = read_reactions(open('examples/tca.model.tab', 'r').read(), 'C00080')
+    c_sums_test = read_sums(sums_text, S_pd)
+    pd.testing.assert_frame_equal(c_sums_test, c_sums)

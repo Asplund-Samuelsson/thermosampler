@@ -36,6 +36,21 @@ def ratios_ok(c, ratio_lim, ratio_mat):
 def sum_ok(c, max_tot_c):
     return np.sum(np.exp(c)) <= max_tot_c
 
+# Define function for checking custom metabolite group concentration sums are ok
+def sums_ok(c, c_sums):
+    # If there are no concentration sum constraints, return True
+    if c_sums is None:
+        return True
+    # Add metabolite concentrations to sums table
+    c_x = c_sums.copy()
+    c_x['cpd_conc'] = np.exp(c[c_x['cpd_index']])
+    # Calculate group sums
+    c_x = c_x.drop(['cpd_index'], axis=1)
+    c_x = c_x.groupby(['cpd_group', 'group_sum']).sum()
+    c_x = c_x.reset_index()
+    # Check that no sum is too large
+    return not False in list(c_x['cpd_conc'] <= c_x['group_sum'])
+
 # Define function that checks concentrations are within limits
 def limits_ok(c, c_lim):
     c_l = c.reshape([c.shape[0],1])
@@ -44,7 +59,9 @@ def limits_ok(c, c_lim):
     return min and max
 
 # Define function for checking feasibility, ratios, sum, and limits in one go
-def is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf=0):
+def is_feasible(
+    c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, c_sums, mdf=0
+    ):
     # Run all feasibility tests
     ok = [
         # Driving forces above minimum
@@ -54,7 +71,9 @@ def is_feasible(c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf=0):
         # Concentration sum below max
         sum_ok(c, max_tot_c),
         # Concentrations within bounds
-        limits_ok(c, c_lim)
+        limits_ok(c, c_lim),
+        # Concentration sum groups below individual max values
+        sums_ok(c, c_sums)
     ]
     # Check that all feasibility tests are True
     return sum(ok) == len(ok)
@@ -73,11 +92,11 @@ def random_direction(c_lim):
 
 # Define function to generate one feasible metabolite concentration set
 def generate_feasible_c(
-        g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf=0
+        g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf=0, c_sums=None
     ):
     c = random_c(c_lim) # Initialize c
     while not is_feasible(
-        c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf
+        c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, c_sums, mdf
     ):
         c = random_c(c_lim) # Generate new c until feasible
     return c
@@ -122,13 +141,13 @@ def calculate_theta_hard_limit(c, direction, c_lim):
 # Define function for determining minimum and maximum step length (theta)
 def theta_range(
     c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-    c_lim, direction, precision=1e-3, mdf=0
+    c_lim, direction, precision=1e-3, mdf=0, c_sums=None
     ):
     # Define function for honing in on a theta limit
     def hone_theta(theta_outer, theta_inner=0):
         if is_feasible(
             c + theta_outer * direction, g, RT, S, ratio_lim, ratio_mat,
-            max_tot_c, c_lim, mdf
+            max_tot_c, c_lim, c_sums, mdf
             ):
             # If the outer theta is feasible, accept that solution
             theta_inner = theta_outer
@@ -138,7 +157,7 @@ def theta_range(
                 theta_cur = (theta_outer + theta_inner) / 2
                 if is_feasible(
                     c + theta_cur * direction, g, RT, S, ratio_lim, ratio_mat,
-                    max_tot_c, c_lim, mdf
+                    max_tot_c, c_lim, c_sums, mdf
                     ):
                     # Move outwards, set inner limit to current theta
                     theta_inner = theta_cur
@@ -159,7 +178,7 @@ def theta_range(
 # Define function for performing hit-and-run sampling within the solution space
 def hit_and_run(
     c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-    c_lim, n_samples, precision=1e-3, mdf=0, n=1
+    c_lim, n_samples, precision=1e-3, mdf=0, n=1, c_sums=None
     ):
     # Set up concentration storage list
     fMCSs = [c]
@@ -173,7 +192,7 @@ def hit_and_run(
         # Determine minimum and maximum step length
         theta = theta_range(
             c, g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-            c_lim, direction, precision, mdf
+            c_lim, direction, precision, mdf, c_sums
         )
         # Perform a random sampling of the step length
         theta = theta[0] + np.random.random() * (theta[1] - theta[0])
@@ -181,7 +200,7 @@ def hit_and_run(
         c = c + theta * direction
         # Ensure feasibility
         if not is_feasible(
-                c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, mdf
+                c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, c_sums, mdf
             ):
             print("Warning: Infeasible point reached.")
             break
@@ -231,11 +250,27 @@ def read_concentrations(c_text):
         concentrations.index = [c_text[x][0] for x in range(len(c_text))]
     return concentrations
 
+def read_sums(sums_text, S_pd):
+    # Parse text
+    sums_list = [x.split("\t") for x in sums_text.strip().split("\n")]
+    # Make into data frame
+    sums_df = pd.DataFrame(sums_list)
+    # Find row index of each compound in stoichiometric matrix
+    c_sums = sums_df.copy()
+    c_sums.loc[:,0] = [S_pd.index.tolist().index(x) for x in sums_df.loc[:,0]]
+    # Rename columns
+    c_sums = c_sums.rename(columns={0:'cpd_index',1:'cpd_group',2:'group_sum'})
+    # Convert group and sum to int and float
+    c_sums.loc[:,'cpd_group'] = pd.to_numeric(c_sums['cpd_group'])
+    c_sums.loc[:,'group_sum'] = pd.to_numeric(c_sums['group_sum'])
+    return c_sums
+
 # Main code block
 def main(
         reaction_file, std_drG_file, outfile_name, cons_file, ratio_cons_file,
         max_tot_c, n_samples, n_starts=1, c_file = None,
-        T=298.15, R=8.31e-3, proton_name='C00080', precision=1e-3, mdf=0, n=1
+        T=298.15, R=8.31e-3, proton_name='C00080', precision=1e-3, mdf=0, n=1,
+        conc_sums=None
     ):
 
     sWrite("\nLoading data...")
@@ -275,6 +310,12 @@ def main(
         c_pd = read_concentrations(open(c_file, 'r').read())
         c_pd = c_pd.reindex(S_pd.index.values)
 
+    # Load concentration sums
+    if not conc_sums:
+        c_sums = None
+    else:
+        c_sums = read_sums(open(conc_sums, 'r').read(), S_pd)
+
     sWrite(" Done.\n")
 
     sWrite("Performing hit-and-run sampling...")
@@ -283,7 +324,7 @@ def main(
             hit_and_run(
                 np.log(c_pd.iloc[:,i].to_numpy()),
                 g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-                c_lim, n_samples, precision, mdf, n
+                c_lim, n_samples, precision, mdf, n, c_sums
             ) \
             for i in range(c_pd.shape[1])
         ]
@@ -292,7 +333,7 @@ def main(
             hit_and_run(
                 generate_feasible_c(g,RT,S,ratio_lim,ratio_mat,max_tot_c,c_lim),
                 g, RT, S, ratio_lim, ratio_mat, max_tot_c,
-                c_lim, n_samples, precision, mdf, n
+                c_lim, n_samples, precision, mdf, n, c_sums
             )\
             for i in range(n_starts)
         ]
@@ -376,10 +417,14 @@ if __name__ == "__main__":
         '-n', type=int, default=1,
         help="Save every nth step of the random walk (default 1)."
     )
+    parser.add_argument(
+        '--conc_sums', default=None,
+        help='Tab-delimited compound name, group, and group sum (default None).'
+    )
     args = parser.parse_args()
     main(
         args.reactions, args.std_drG, args.outfile, args.constraints,
         args.ratios, args.max_conc, args.steps, args.starts,
         args.concs, args.T, args.R, args.proton_name,
-        args.precision, args.mdf, args.n
+        args.precision, args.mdf, args.n, args.conc_sums
     )
