@@ -5,15 +5,14 @@ library(doMC)
 
 # Load data
 registerDoMC(20)
+
 sampling = bind_rows(
   foreach(
     f=list.files("results/syntrophic_2x10x1M", full.names=T)
   ) %dopar% {
-    # Read only every 10 rows
-    fp = pipe(paste("(head -1", f, "; sed -n '2~10p'", f, ")"))
     Lim = ifelse(grepl("mdf", f), "Optimum", "Feasible")
     Rep = str_split(f, "\\.")[[1]][3]
-    read_tsv(fp) %>% mutate(Limit = Lim, Replicate = Rep)
+    read_tsv(f) %>% mutate(Limit = Lim, Replicate = Rep)
   }
 )
 
@@ -81,8 +80,6 @@ gp = gp + theme(
 
 ggsave("results/syntrophic.sampling_pca.2x10x1M.png", w=7, h=27, dpi=250)
 
-sampling_pca_plot_small = filter(sampling_pca_plot, fMCS %% 100 == 0)
-
 gp = ggplot(
   sampling_pca_plot,
   aes(x=PC1, y=PC2, alpha=fMCS, colour=Replicate)
@@ -119,10 +116,7 @@ concs = sampling %>%
 
 library(ggridges)
 
-small_concs = filter(concs, fMCS %% 100 == 0)
-
 gp = ggplot(
-  #small_concs,
   concs,
   aes(
     x=Concentration,
@@ -142,7 +136,7 @@ gp = gp + geom_point(
   ),
   shape=124, fill="black", color="black"
 )
-gp = gp + scale_x_log10()
+gp = gp + scale_x_log10(breaks=10**(-5:3), minor_breaks=NULL)
 gp = gp + theme_bw()
 gp = gp + theme(
   axis.ticks = element_line(colour="black"),
@@ -158,7 +152,6 @@ ggsave(
 )
 
 gp = ggplot(
-  #small_concs,
   concs,
   aes(
     x=Concentration,
@@ -172,7 +165,7 @@ gp = gp + scale_fill_manual(values=c("#e08214","#8073ac"), guide=F)
 gp = gp + geom_point(
   data=conc_ranges, shape=124, fill="black", color="black"
 )
-gp = gp + scale_x_log10()
+gp = gp + scale_x_log10(breaks=10**(-5:3), minor_breaks=NULL)
 gp = gp + theme_bw()
 gp = gp + theme(
   axis.ticks = element_line(colour="black"),
@@ -201,10 +194,7 @@ sampling_G = as_tibble(
 
 dfs = sampling_G %>% gather(Reaction, DF, -Limit, -fMCS, -Replicate)
 
-small_dfs = filter(dfs, fMCS %% 100 == 0)
-
 gp = ggplot(
-  #small_dfs,
   dfs,
   aes(
     x=DF,
@@ -215,7 +205,7 @@ gp = ggplot(
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
 gp = gp + scale_fill_manual(values=c("#e08214","#8073ac"), guide=F)
-gp = gp + scale_x_sqrt()
+gp = gp + scale_x_sqrt(breaks=c(1,8,25,50,75,100), minor_breaks=NULL)
 gp = gp + theme_bw()
 gp = gp + theme(
   axis.ticks = element_line(colour="black"),
@@ -231,7 +221,6 @@ ggsave(
 )
 
 gp = ggplot(
-  #small_dfs,
   dfs,
   aes(
     x=DF,
@@ -242,7 +231,7 @@ gp = ggplot(
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
 gp = gp + scale_fill_manual(values=c("#e08214","#8073ac"), guide=F)
-gp = gp + scale_x_sqrt()
+gp = gp + scale_x_sqrt(breaks=c(1,8,25,50,75,100), minor_breaks=NULL)
 gp = gp + theme_bw()
 gp = gp + theme(
   axis.ticks = element_line(colour="black"),
