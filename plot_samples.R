@@ -76,6 +76,12 @@ RT = 8.31e-3 * 298.15
 
 sample_groups = unique(sampling$Group)
 
+# Numbers for formatting
+n_rep = length(unique(sampling$Replicate)) # Number of replicates
+n_grp = length(sample_groups) # Number of groups
+n_met = nrow(S) - sum(!is.na(exclude)) # Number of metabolites
+n_rxn = ncol(S) - 1
+
 conc_ranges = concs_file %>%
   read_tsv(col_names=c("Metabolite", "Low", "High")) %>%
   gather(Bound, Concentration, -Metabolite) %>%
@@ -84,7 +90,7 @@ conc_ranges = concs_file %>%
   inner_join(
     tibble(
       Group=rep(sample_groups, each=2),
-      Bound=rep(c("Low", "High"), length(sample_groups))
+      Bound=rep(c("Low", "High"), n_grp)
     )
   ) %>%
   # Remove metabolites that are excluded
@@ -130,8 +136,8 @@ gp = gp + theme(
 
 ggsave(
   paste(outprefix, ".sampling_pca.png", sep=""),
-  width=7/2*length(sample_groups),
-  height=27/10*length(unique(sampling$Replicate)),
+  width=7/2*n_grp,
+  height=27/10*n_rep,
   dpi=250
 )
 
@@ -157,7 +163,7 @@ gp = gp + theme(
 
 ggsave(
   paste(outprefix, ".sampling_pca_compact.png", sep=""),
-  width=7/2*length(sample_groups), height=4, dpi=250
+  width=7/2*n_grp, height=4, dpi=250
 )
 
 # Plot concentration ranges
@@ -179,8 +185,8 @@ gp = gp + geom_point(
   data = conc_ranges %>%
     inner_join(
       tibble(
-        Replicate=rep(1:10, each=2),
-        Bound=rep(c("Low", "High"), 10)
+        Replicate=rep(1:n_rep, each=2),
+        Bound=rep(c("Low", "High"), n_rep)
       )
     ),
   shape=124, fill="black", color="black"
@@ -199,7 +205,7 @@ gp = gp + xlab("Concentration (mM)")
 ggsave(
   paste(outprefix, ".sampling_concs.pdf", sep=""),
   width=210/25.4,
-  height=1200/25.4/10*length(unique(sampling$Replicate))
+  height=1150/25.4/(72/5*2*10)*n_met/5*n_rep*n_grp + 50/25.4
 )
 
 gp = ggplot(
@@ -226,7 +232,7 @@ gp = gp + xlab("Concentration (mM)")
 ggsave(
   paste(outprefix, ".sampling_concs_combo.pdf", sep=""),
   width=210/25.4,
-  height=420/25.4/2*length(sample_groups)
+  height=370/25.4/(72/5*2)*n_met/5*n_grp + 50/25.4
 )
 
 # Calculate driving forces
@@ -260,7 +266,7 @@ gp = gp + xlab("Driving force (kJ/mol)")
 ggsave(
   paste(outprefix, ".sampling_dfs.pdf", sep=""),
   width=210/25.4,
-  height=800/25.4/10*length(unique(sampling$Replicate))
+  height=750/25.4/(44/5*2*10)*n_rxn/5*n_rep*n_grp + 50/25.4
 )
 
 gp = ggplot(dfs, aes(x=DF, fill=Group, y=Group))
@@ -281,5 +287,5 @@ gp = gp + xlab("Driving force (kJ/mol)")
 ggsave(
   paste(outprefix, ".sampling_dfs_combo.pdf", sep=""),
   width=210/25.4,
-  height=280/25.4/2*length(sample_groups)
+  height=230/25.4/(44/5*2)*n_rxn/5*n_grp + 50/25.4
 )
