@@ -119,7 +119,7 @@ gp = ggplot(
   sampling_pca_plot,
   aes(x=PC1, y=PC2, colour=fMCS)
 )
-gp = gp + geom_point(alpha=0.2, size=0.5, stroke=0)
+gp = gp + geom_point(alpha=0.2, size=1, stroke=0)
 gp = gp + scale_colour_distiller(palette="PuBuGn")
 gp = gp + labs(
             x=paste("PC1 (", sampling_pca_var[1], ")", sep=""),
@@ -145,7 +145,7 @@ gp = ggplot(
   sampling_pca_plot,
   aes(x=PC1, y=PC2, alpha=fMCS, colour=Replicate)
 )
-gp = gp + geom_point(size=0.1, stroke=0)
+gp = gp + geom_point(size=0.5, stroke=0)
 gp = gp + scale_alpha_continuous(range=c(0.5,0.1))
 gp = gp + scale_colour_brewer(palette="Paired", guide=F)
 gp = gp + labs(
@@ -162,7 +162,7 @@ gp = gp + theme(
 )
 
 ggsave(
-  paste(outprefix, ".sampling_pca_compact.png", sep=""),
+  paste(outprefix, ".sampling_pca_combo.png", sep=""),
   width=7/2*n_grp, height=4, dpi=250
 )
 
@@ -185,7 +185,7 @@ gp = gp + geom_point(
   data = conc_ranges %>%
     inner_join(
       tibble(
-        Replicate=rep(1:n_rep, each=2),
+        Replicate=rep(unique(sampling$Replicate), each=2),
         Bound=rep(c("Low", "High"), n_rep)
       )
     ),
