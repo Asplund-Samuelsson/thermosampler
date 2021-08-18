@@ -2,7 +2,29 @@
 
 Linear programming and Markov Chain Monte Carlo sampling tools for thermodynamic analysis of metabolism.
 
-### MDF and NEM analysis
+### Contents
+
+**1. [System requirements](#requirements)**
+
+**2. [MDF and NEM analysis](#mdf)**
+
+**3. [Hit-and-run analysis](#hit)**
+
+**4. [Author](#author)**
+
+<a name="requirements"></a>
+## System requirements
+
+- Linux operating system (Tested on Ubuntu 18.04.5 LTS and 20.04.2 LTS)
+- bash 4.0 (Tested with 4.4.20 and 5.0.17)
+- Python ≥ 3.7 (Tested with 3.7.6)
+- R ≥ 4.1.1 (Tested with 4.1.1)
+- GNU parallel 20161222 (Tested with 20161222)
+- Python libraries: numpy, pandas, scipy
+- R libraries: doMC, foreach, ggridges, optparse, scales, tidyverse
+
+<a name="mdf"></a>
+## MDF and NEM analysis
 
 `mdf.py` performs Max-min Driving Force (MDF; [Noor _et al._, 2014](http://doi.org/10.1371/journal.pcbi.1003483)) and Network-Embedded
 MDF (NEM; [Asplund-Samuelsson _et al._, 2018](https://doi.org/10.1016/j.ymben.2017.12.011)) analysis. Run `./mdf.py -h` to list all options of the script.
@@ -38,7 +60,8 @@ results/Synechocystis_Lys_nem.csv
 examples/tca.model_drgs.tab results/tca_mdf.csv
 ```
 
-### Hit-and-run analysis
+<a name="hit"></a>
+## Hit-and-run analysis
 
 `sampling.py` performs hit-and-run sampling of feasible metabolite concentration sets by a random walk through the solution space. Run `./sampling.py -h` to list all options of the script.
 
@@ -133,5 +156,6 @@ Then, driving forces are plotted with replicates combined to yield a smoother re
 
 ![alt text](examples/images/tca_example_dfs_combo.png "Visualization of random walk driving force distributions for all replicates combined")
 
-### Author
+<a name="author"></a>
+## Author
 Johannes Asplund-Samuelsson, KTH (johannes.asplund.samuelsson@scilifelab.se)
