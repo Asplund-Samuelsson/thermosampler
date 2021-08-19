@@ -138,7 +138,8 @@ ggsave(
   paste(outprefix, ".sampling_pca.png", sep=""),
   width=7/2*n_grp,
   height=27/10*n_rep,
-  dpi=250
+  dpi=250,
+  limitsize = FALSE
 )
 
 gp = ggplot(
@@ -163,7 +164,8 @@ gp = gp + theme(
 
 ggsave(
   paste(outprefix, ".sampling_pca_combo.png", sep=""),
-  width=7/2*n_grp, height=4, dpi=250
+  width=7/2*n_grp, height=4, dpi=250,
+  limitsize = FALSE
 )
 
 # Plot concentration ranges
@@ -205,7 +207,8 @@ gp = gp + xlab("Concentration (mM)")
 ggsave(
   paste(outprefix, ".sampling_concs.pdf", sep=""),
   width=210/25.4,
-  height=1150/25.4/(72/5*2*10)*n_met/5*n_rep*n_grp + 50/25.4
+  height=1150/25.4/(72/5*2*10)*n_met/5*n_rep*n_grp + 50/25.4,
+  limitsize = FALSE
 )
 
 gp = ggplot(
@@ -232,7 +235,8 @@ gp = gp + xlab("Concentration (mM)")
 ggsave(
   paste(outprefix, ".sampling_concs_combo.pdf", sep=""),
   width=210/25.4,
-  height=370/25.4/(72/5*2)*n_met/5*n_grp + 50/25.4
+  height=370/25.4/(72/5*2)*n_met/5*n_grp + 50/25.4,
+  limitsize = FALSE
 )
 
 # Calculate driving forces
@@ -266,7 +270,8 @@ gp = gp + xlab("Driving force (kJ/mol)")
 ggsave(
   paste(outprefix, ".sampling_dfs.pdf", sep=""),
   width=210/25.4,
-  height=750/25.4/(44/5*2*10)*n_rxn/5*n_rep*n_grp + 50/25.4
+  height=750/25.4/(44/5*2*10)*n_rxn/5*n_rep*n_grp + 50/25.4,
+  limitsize = FALSE
 )
 
 gp = ggplot(dfs, aes(x=DF, fill=Group, y=Group))
@@ -287,5 +292,6 @@ gp = gp + xlab("Driving force (kJ/mol)")
 ggsave(
   paste(outprefix, ".sampling_dfs_combo.pdf", sep=""),
   width=210/25.4,
-  height=230/25.4/(44/5*2)*n_rxn/5*n_grp + 50/25.4
+  height=230/25.4/(44/5*2)*n_rxn/5*n_grp + 50/25.4,
+  limitsize = FALSE
 )
