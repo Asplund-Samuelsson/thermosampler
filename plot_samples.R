@@ -27,6 +27,10 @@ option_list = list(
     help="Metabolites to exclude from plotting, separated by comma."
   ),
   make_option(
+    c("-r", "--remove"), type="character", default="",
+    help="Reactions to remove from plotting, separated by comma."
+  ),
+  make_option(
     c("-o", "--outprefix"), type="character", default=NA,
     help="Prefix for output (required)."
   )
@@ -42,6 +46,7 @@ stoich_file = opt$stoich
 drgs_file = opt$drgs
 concs_file = opt$concs
 exclude_string = opt$exclude
+remove_string = opt$remove
 outprefix = opt$outprefix
 
 # Required files must be supplied
@@ -57,7 +62,8 @@ library(doMC)
 # Load data
 registerDoMC(detectCores())
 
-exclude = str_split(exclude_string, ",") %>% unlist()
+exclude_metabolites = str_split(exclude_string, ",") %>% unlist()
+exclude_reactions = str_split(remove_string, ",") %>% unlist()
 
 sampling = bind_rows(
   foreach(
@@ -79,8 +85,8 @@ sample_groups = unique(sampling$Group)
 # Numbers for formatting
 n_rep = length(unique(sampling$Replicate)) # Number of replicates
 n_grp = length(sample_groups) # Number of groups
-n_met = nrow(S) - sum(!is.na(exclude)) # Number of metabolites
-n_rxn = ncol(S) - 1
+n_met = nrow(S) - sum(!is.na(exclude_metabolites)) # Number of metabolites
+n_rxn = ncol(S) - 1 - sum(!is.na(exclude_reactions)) # Number of reactions
 
 conc_ranges = concs_file %>%
   read_tsv(col_names=c("Metabolite", "Low", "High")) %>%
@@ -94,7 +100,7 @@ conc_ranges = concs_file %>%
     )
   ) %>%
   # Remove metabolites that are excluded
-  filter(!(Metabolite %in% exclude))
+  filter(!(Metabolite %in% exclude_metabolites))
 
 # Perform PCA to plot random walk steps through solution space
 sampling_X = sampling %>%
@@ -177,7 +183,7 @@ concs = sampling %>%
 library(ggridges)
 
 gp = ggplot(
-  filter(concs, !(Metabolite %in% exclude)),
+  filter(concs, !(Metabolite %in% exclude_metabolites)),
   aes(x=Concentration, fill=Group, y=paste(Group, Replicate))
 )
 gp = gp + geom_density_ridges(alpha=0.5)
@@ -212,7 +218,7 @@ ggsave(
 )
 
 gp = ggplot(
-  filter(concs, !(Metabolite %in% exclude)),
+  filter(concs, !(Metabolite %in% exclude_metabolites)),
   aes(x=Concentration, fill=Group, y=Group)
 )
 gp = gp + geom_density_ridges(alpha=0.5)
@@ -252,7 +258,10 @@ sampling_G = as_tibble(
 
 dfs = sampling_G %>% gather(Reaction, DF, -Group, -fMCS, -Replicate)
 
-gp = ggplot(dfs, aes(x=DF, fill=Group, y=paste(Group, Replicate)))
+gp = ggplot(
+  filter(dfs, !(Reaction %in% exclude_reactions)),
+  aes(x=DF, fill=Group, y=paste(Group, Replicate))
+)
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
 gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
@@ -274,7 +283,10 @@ ggsave(
   limitsize = FALSE
 )
 
-gp = ggplot(dfs, aes(x=DF, fill=Group, y=Group))
+gp = ggplot(
+  filter(dfs, !(Reaction %in% exclude_reactions)),
+  aes(x=DF, fill=Group, y=Group)
+)
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
 gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
