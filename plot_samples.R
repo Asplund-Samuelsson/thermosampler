@@ -1,8 +1,14 @@
 #!/usr/bin/env Rscript
 
-### COMMAND LINE ARGUMENTS #####################################################
-
+# Load libraries
+library(tidyverse)
+library(foreach)
+library(doMC)
+library(ggridges)
+library(scales)
 library(optparse)
+
+### COMMAND LINE ARGUMENTS #####################################################
 
 # List command line options
 option_list = list(
@@ -54,11 +60,6 @@ if (sum(is.na(c(indir, stoich_file, drgs_file, concs_file, outprefix)))) {
   stop("Missing required arguments. See usage information (--help).")
 }
 
-# Load libraries
-library(tidyverse)
-library(foreach)
-library(doMC)
-
 # Load data
 registerDoMC(detectCores())
 
@@ -71,7 +72,7 @@ sampling = bind_rows(
   ) %dopar% {
     Grp = str_split(f, "\\.")[[1]][2]
     Rep = str_split(f, "\\.")[[1]][3]
-    read_tsv(f) %>% mutate(Group = Grp, Replicate = Rep)
+    read_tsv(f) %>% mutate(Group = as.factor(Grp), Replicate = Rep)
   }
 )
 
@@ -110,7 +111,6 @@ sampling_X = sampling %>%
 sampling_pca = prcomp(scale(sampling_X, scale=F))
 
 # Calculate fraction of variance per PC
-library(scales)
 sampling_pca_var = percent(
   sampling_pca$sdev^2 / sum(sampling_pca$sdev^2),
   accuracy = 0.1
@@ -180,8 +180,6 @@ concs = sampling %>%
   gather(Metabolite, lnC, -Group, -fMCS, -Replicate) %>%
   mutate(Concentration = exp(lnC)*1000)
 
-library(ggridges)
-
 gp = ggplot(
   filter(concs, !(Metabolite %in% exclude_metabolites)),
   aes(x=Concentration, fill=Group, y=paste(Group, Replicate))
@@ -217,6 +215,75 @@ ggsave(
   limitsize = FALSE
 )
 
+# Perform Kolmogorov-Smirnov test of distributions
+test_pairs = concs$Group %>%
+  unique() %>%
+  as.character() %>%
+  combn(2) %>%
+  t() %>%
+  as_tibble() %>%
+  rename(A = V1, B = V2) %>%
+  mutate(
+    A = factor(A, levels=levels(concs$Group)),
+    B = factor(B, levels=levels(concs$Group))
+  )
+
+compare_distributions = function(df, test_pairs){
+  test_pairs$D = 0
+  for (i in 1:nrow(test_pairs)){
+    A = filter(df, Group == test_pairs[i,]$A)$Value
+    B = filter(df, Group == test_pairs[i,]$B)$Value
+    test_output = ks.test(A, B, alternative="two.sided")
+    test_pairs[i,"D"] = test_output$statistic
+  }
+  return(test_pairs)
+}
+
+registerDoMC(4)
+
+concs_comparison = bind_rows(
+  foreach (x = unique(concs$Metabolite)) %dopar% {
+    concs %>%
+      filter(Metabolite == x) %>%
+      select(Group, lnC) %>%
+      rename(Value = lnC) %>%
+      compare_distributions(test_pairs) %>%
+      mutate(Metabolite = x)
+  }
+)
+
+# Calculate where to place lines showing dissimilarity of distributions
+min_conc = concs %>%
+  filter(!(Metabolite %in% exclude_metabolites)) %>%
+  pull(Concentration) %>%
+  min()
+
+max_conc = concs %>%
+  filter(!(Metabolite %in% exclude_metabolites)) %>%
+  pull(Concentration) %>%
+  max()
+
+max_min_conc = concs %>%
+  filter(!(Metabolite %in% exclude_metabolites)) %>%
+  group_by(Metabolite) %>%
+  summarise(c_min=min(Concentration), c_max=max(Concentration)) %>%
+  mutate(
+    Space_below = log10(c_min) - log10(min_conc),
+    Space_above = log10(max_conc) - log10(c_max)
+  )
+
+concs_comparison_plot = concs_comparison %>%
+  mutate(Y = as.integer(A), Y_end = as.integer(B)) %>%
+  left_join(max_min_conc) %>%
+  group_by(Metabolite) %>%
+  mutate(X_order = rank(Y + Y_end, ties.method="first")) %>%
+  ungroup() %>%
+  mutate(X = c_max * (10 ** (0.3*X_order + 0.5)), Group = A) %>%
+  filter(!(Metabolite %in% exclude_metabolites)) %>%
+  filter(D > 0.15) %>%
+  rename(Difference = D)
+
+# Plot combined distributions of concentrations
 gp = ggplot(
   filter(concs, !(Metabolite %in% exclude_metabolites)),
   aes(x=Concentration, fill=Group, y=Group)
@@ -227,7 +294,17 @@ gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
 gp = gp + geom_point(
   data=conc_ranges, shape=124, fill="black", color="black"
 )
-gp = gp + scale_x_log10(breaks=10**(-5:3), minor_breaks=NULL)
+gp = gp + geom_segment(
+  data=concs_comparison_plot,
+  mapping=aes(x=X, xend=X, y=Y, yend=Y_end, color = Difference),
+)
+gp = gp + scale_color_viridis_c(option="plasma")
+gp = gp + scale_x_log10(
+  breaks=10**(
+    floor(log10(min_conc)):ceiling(log10(max(concs_comparison_plot$X)))
+  ),
+  minor_breaks=NULL
+)
 gp = gp + theme_bw()
 gp = gp + theme(
   axis.ticks = element_line(colour="black"),
@@ -240,7 +317,7 @@ gp = gp + xlab("Concentration (mM)")
 
 ggsave(
   paste(outprefix, ".sampling_concs_combo.pdf", sep=""),
-  width=210/25.4,
+  width=(210 + 15*nrow(test_pairs))/25.4,
   height=370/25.4/(72/5*2)*n_met/5*n_grp + 50/25.4,
   limitsize = FALSE
 )
@@ -283,6 +360,48 @@ ggsave(
   limitsize = FALSE
 )
 
+# Compare distributions of DFs
+dfs_comparison = bind_rows(
+  foreach (x = unique(dfs$Reaction)) %dopar% {
+    dfs %>%
+      filter(Reaction == x) %>%
+      select(Group, DF) %>%
+      rename(Value = DF) %>%
+      compare_distributions(test_pairs) %>%
+      mutate(Reaction = x)
+  }
+)
+
+# Calculate where to place lines showing dissimilarity of distributions
+min_df = dfs %>%
+  filter(!(Reaction %in% exclude_reactions)) %>%
+  pull(DF) %>%
+  min()
+
+max_df = dfs %>%
+  filter(!(Reaction %in% exclude_reactions)) %>%
+  pull(DF) %>%
+  max()
+
+max_min_df = dfs %>%
+  filter(!(Reaction %in% exclude_reactions)) %>%
+  group_by(Reaction) %>%
+  summarise(df_min=min(DF), df_max=max(DF))
+
+dfs_comparison_plot = dfs_comparison %>%
+  mutate(Y = as.integer(A), Y_end = as.integer(B)) %>%
+  left_join(max_min_df) %>%
+  group_by(Reaction) %>%
+  mutate(X_order = rank(Y + Y_end, ties.method="first")) %>%
+  ungroup() %>%
+  mutate(
+    X = (sqrt(df_max + max_df/20) + X_order * sqrt(max_df)/20) ** 2,
+    Group = A
+  ) %>%
+  filter(!(Reaction %in% exclude_reactions)) %>%
+  filter(D > 0.15) %>%
+  rename(Difference = D)
+
 gp = ggplot(
   filter(dfs, !(Reaction %in% exclude_reactions)),
   aes(x=DF, fill=Group, y=Group)
@@ -290,6 +409,11 @@ gp = ggplot(
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
 gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
+gp = gp + geom_segment(
+  data=dfs_comparison_plot,
+  mapping=aes(x=X, xend=X, y=Y, yend=Y_end, color = Difference),
+)
+gp = gp + scale_color_viridis_c(option="plasma")
 gp = gp + scale_x_sqrt(breaks=c(1,8,25,50,75,100), minor_breaks=NULL)
 gp = gp + theme_bw()
 gp = gp + theme(
@@ -303,7 +427,7 @@ gp = gp + xlab("Driving force (kJ/mol)")
 
 ggsave(
   paste(outprefix, ".sampling_dfs_combo.pdf", sep=""),
-  width=210/25.4,
+  width=(210 + 15*nrow(test_pairs))/25.4,
   height=230/25.4/(44/5*2)*n_rxn/5*n_grp + 50/25.4,
   limitsize = FALSE
 )

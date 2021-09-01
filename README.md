@@ -144,7 +144,7 @@ Concentration distributions obtained from the random walk are first visualized d
 
 ![alt text](examples/images/tca_example_concs.png "Visualization of random walk concentration distributions for all five replicates")
 
-As the random walks are quite noisy, it is best to combine multiple replicates to obtain smoother distributions. It can also be helpful to perform more steps, for example in the millions. The combined plot visualizes all values from all replicates of each group (`results/tca_sampling_plots.sampling_concs_combo.pdf`).
+As the random walks are quite noisy, it is best to combine multiple replicates to obtain smoother distributions. It can also be helpful to perform more steps, for example in the millions. The combined plot visualizes all values from all replicates of each group (`results/tca_sampling_plots.sampling_concs_combo.pdf`). Distributions are compared between `Group` variables with the Kolmogorov-Smirnov algorithm (function `ks.test`), providing the _D_ statistic that measures how different two distributions are. The _D_ statistic is indicated by the color ("Difference") of vertical lines connecting two distributions, situated in each facet to the right of the distributions. Any two distributions with _D_ ≤ 0.15 are considered equal and therefore do not get a connecting vertical line.
 
 ![alt text](examples/images/tca_example_concs_combo.png "Visualization of random walk concentration distributions for all replicates combined")
 
@@ -152,7 +152,7 @@ Finally, the plotting script calculates the driving forces for each reaction bas
 
 ![alt text](examples/images/tca_example_dfs.png "Visualization of random walk driving force distributions for all five replicates")
 
-Then, driving forces are plotted with replicates combined to yield a smoother representation of the thermodynamic solution space (`results/tca_sampling_plots.sampling_dfs_combo.pdf`). It appears that [R01082](https://www.genome.jp/dbget-bin/www_bget?rn:R01082), i.e. fumarate hydratase, is somewhat of a thermodynamic bottleneck in this experiment.
+Then, driving forces are plotted with replicates combined to yield a smoother representation of the thermodynamic solution space (`results/tca_sampling_plots.sampling_dfs_combo.pdf`). It appears that [R01082](https://www.genome.jp/dbget-bin/www_bget?rn:R01082), i.e. fumarate hydratase, is somewhat of a thermodynamic bottleneck in this experiment. As for the concentrations, the Kolmogorov-Smirnov _D_ statistic ("Difference") is used to highlight differences in the distribution shapes.
 
 ![alt text](examples/images/tca_example_dfs_combo.png "Visualization of random walk driving force distributions for all replicates combined")
 
