@@ -4,13 +4,73 @@ Linear programming and Markov Chain Monte Carlo sampling tools for thermodynamic
 
 ### Contents
 
-**1. [System requirements](#requirements)**
+**1. [Background](#background)**
 
-**2. [MDF and NEM analysis](#mdf)**
+**2. [System requirements](#requirements)**
 
-**3. [Hit-and-run analysis](#hit)**
+**3. [MDF and NEM analysis](#mdf)**
 
-**4. [Author](#author)**
+**4. [Hit-and-run analysis](#hit)**
+
+**5. [Author](#author)**
+
+<a name="background"></a>
+## Background
+
+### Motivation
+
+Tools such as NET analysis ([Kümmel _et al._ 2006](https://doi.org/10.1038/msb4100074), [Zamboni _et al._ 2008](https://doi.org/10.1186/1471-2105-9-199)) allow calculation of the minimum and maximum feasible metabolite concentrations in a metabolic network, while ensuring that all reactions have a negative Gibbs free energy change, or, equivalently, a positive thermodynamic driving force. Similarly, Max-min Driving Force analysis (MDF; [Noor _et al._, 2014](http://doi.org/10.1371/journal.pcbi.1003483)) is another linear programming approach to finding an optimal set of metabolite concentrations in a metabolic network. However, the aforementioned approaches only identify extreme concentration values, which is why this `thermosampler` framework was developed to explore the full "solution space" of feasible metabolite concentrations (**[Fig 1](#fig1)**). A random walk, or hit-and-run algorithm, allows assessment of metabolite concentration distributions through exploration of all combinations of concentrations that are thermodynamically feasible.
+
+![alt text](examples/images/thermosampler_explanation.png "Explanation of the thermosampler hit-and-run algorithm")
+<a name="fig1"></a>
+**Fig 1. Thermosampler framework overview and example.** One feasible combination of concentrations within the solution space serves as starting point ("Start") for a random walk. First, a random direction is picked (1). Stepping outside and back into feasible space over and over (2) determines the longest possible step size in the positive and negative directions (3). Then a random step length is performed (4). A new point in the solution space is thus reached and the process is repeated many times over. The right panel depicts 200 steps performed by the `sampling.py` script. Color indicates step number (fMCS; feasible metabolite concentration set). Note that the random walk occurs in logarithmic space, which makes it appear as if higher concentrations are more sparsely sampled.
+
+### Toy model
+
+As an example, a clearly defined solution space was devised using a "toy" model. The toy model has two metabolites, A and B, and one reaction where A is transformed into B. The standard Gibbs free energy change was selected to be 5.705 kJ/mol, which corresponds to the constraint that [A] must be at least 10 times higher than [B]. Furthermore, [A] and [B] must be within the concentration range 0.01 to 1, and the sum of [A] and [B] must be 1 or lower. These three constraints define a solution space on the AB-plane that has the shape of a triangle (**[Fig 1](#fig1)**). A real metabolic network has dozens of reactions and metabolites, and is therefore many magnitudes more complex and difficult to visualize.
+
+### Example sampling
+
+A random walk applying the `thermosampler` algorithm was performed within the triangular AB solution space using the `sampling.py` script:
+```
+./sampling.py --reactions examples/toy.model.tab \
+--std_drG examples/toy.model_drgs.tab \
+--constraints examples/toy.concentrations.tab \
+--max_conc 1 --steps 200 \
+--outfile results/toy.sampling.tab
+```
+
+The results from the random walk were then plotted to yield the right panel in **[Fig 1](#fig1)**:
+```
+examples/plot_toy_example.R
+results/toy.sampling.pdf # Output PDF
+```
+
+<a name="feasibility"></a>
+### Feasibility checks
+
+In the `thermosampler` algorithm, the _feasibility_ concept and how to check it is very important, as it ensures that the random walk occurs within the solution space, and thereby defines the solution space itself. _Feasibility_ consists of adherence of the metabolite concentration vector to several constraints:
+1. **Thermodynamic driving forces** of all reactions must be positive, based on the user-supplied model reactions and directions, as well as the user-supplied standard reaction Gibbs free energy changes.
+2. **Metabolite concentration ratios** must be within the user-supplied ranges.
+3. **Total metabolite concentration** sum must be below the user-defined value.
+4. **Metabolite concentrations** must be within the user-supplied ranges.
+5. **Sums of groups of metabolite concentrations** must be below the user-supplied values.
+
+Several functions exist within `sampling.py` to perform the feasibility checks, and are called by the "master" feasibility function named `is_feasible`. It should be relatively simple to add additional feasibility checks to constrain the solution space further.
+
+### Algorithm
+
+The `thermosampler` algorithm starts at a feasible combination of concentrations within the solution space, _i.e._ one "feasible metabolite concentration set" (fMCS). This set is obtained through inefficient rejection sampling or from MDF analysis. More fMCSs are obtained along the random walk.
+
+The `thermosampler` algorithm works as follows, with concentrations in logarithmic space:
+
+1. **Create a step direction vector** of the same length as the concentrations vector, but with random values.
+2. **Hone in on the edge of the solution space** by determining the maximum and minimum allowable factor _theta_ to apply to the step direction vector before adding it to the current concentrations vector. First the maximum step size without violating any of the initial concentration range bounds is added and [_feasibility_](#feasibility) is checked. If feasible, the edge has been found. If not, it is necessary to hone in on the edge of solution space by iteratively increasing the inner step size (starts at zero) and decreasing the outer step size (starts at the previously mentioned maximum), until the difference is smaller than a user-defined, small value.
+3. Once the difference between inner and outer step size is small enough, the inner step size is taken as "touching" the edge of the solution space, and thereby constituting the maximum feasible step size. The minimum feasible step size (can be negative) is gained from performing step 2 in the opposite direction. Thereby **the minimum and maximum step size is determined**.
+4. **Perform one step in the random walk** by sampling one step size factor _theta_ from the previously calculated range, multiplying the step direction vector by that factor, and adding the product to the current metabolite concentrations vector. The feasibility of the new vector, _i.e._ the new metabolite concentration set, is checked. The algorithm stops and prints an error if an infeasible point is reached, which could happen for example if the solution space would be noncontinuous or concave. The error is however more likely to occur from infeasible model parameters (the input files and variables).
+5. **Repeat from step 1** until the desired number of steps through the solution space have been performed.
+
+Practical examples of using the `thermosampler` algorithm with `sampling.py` are [shown below](#hit).
 
 <a name="requirements"></a>
 ## System requirements
