@@ -16,3 +16,4 @@ ATPase	AMP + PPi <=> ATP + H2O
 oxaD	oxaloacetate + Mg_out <=> pyruvate + CO2 + Mg_in
 nuo	NADPH + MK <=> NADP + MKH2
 fix	MK + NADH <=> NAD + MKH2
+aceT	acetate_in <=> acetate_out
