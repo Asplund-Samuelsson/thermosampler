@@ -37,6 +37,10 @@ option_list = list(
     help="Reactions to remove from plotting, separated by comma."
   ),
   make_option(
+    c("-C", "--config"), type="character", default="",
+    help="Table to rename, filter, and order Group, Reaction, and Metabolite."
+  ),
+  make_option(
     c("-o", "--outprefix"), type="character", default=NA,
     help="Prefix for output (required)."
   )
@@ -53,6 +57,7 @@ drgs_file = opt$drgs
 concs_file = opt$concs
 exclude_string = opt$exclude
 remove_string = opt$remove
+config_file = opt$config
 outprefix = opt$outprefix
 
 # Required files must be supplied
@@ -63,8 +68,6 @@ if (sum(is.na(c(indir, stoich_file, drgs_file, concs_file, outprefix)))) {
 # Load data
 registerDoMC(detectCores())
 
-exclude_metabolites = str_split(exclude_string, ",") %>% unlist()
-exclude_reactions = str_split(remove_string, ",") %>% unlist()
 
 sampling = bind_rows(
   foreach(
@@ -72,7 +75,7 @@ sampling = bind_rows(
   ) %dopar% {
     Grp = str_split(f, "\\.")[[1]][2]
     Rep = str_split(f, "\\.")[[1]][3]
-    read_tsv(f) %>% mutate(Group = as.factor(Grp), Replicate = Rep)
+    read_tsv(f) %>% mutate(Group = Grp, Replicate = Rep)
   }
 )
 
@@ -81,13 +84,37 @@ S = read_tsv(stoich_file) %>%
 G = read_tsv(drgs_file, col_names=c("Reaction", "drG"))
 RT = 8.31e-3 * 298.15
 
-sample_groups = unique(sampling$Group)
+
+# Load configuration data frame and exclude metabolites and reactions
+if (config_file != "") {
+  config_df = read_tsv(config_file)
+} else {
+  config_df = tibble(
+    Id = c(G$Reaction, S$Metabolite, unique(sampling$Group)),
+    Name = c(G$Reaction, S$Metabolite, unique(sampling$Group)),
+    Type = c(
+      rep("Reaction", length(G$Reaction)),
+      rep("Metabolite", length(S$Metabolite)),
+      rep("Group", length(unique(sampling$Group)))
+    )
+  )
+}
+
+exclude_metabolites = str_split(exclude_string, ",") %>% unlist()
+exclude_reactions = str_split(remove_string, ",") %>% unlist()
+
+config_df = config_df %>%
+  filter(!(Type == "Metabolite" & Id %in% exclude_metabolites)) %>%
+  filter(!(Type == "Reaction" & Id %in% exclude_reactions)) %>%
+  mutate(Name = factor(Name, levels=Name))
+
+sample_groups = config_df %>% filter(Type == "Group") %>% pull(Id)
 
 # Numbers for formatting
 n_rep = length(unique(sampling$Replicate)) # Number of replicates
 n_grp = length(sample_groups) # Number of groups
-n_met = nrow(S) - sum(!is.na(exclude_metabolites)) # Number of metabolites
-n_rxn = ncol(S) - 1 - sum(!is.na(exclude_reactions)) # Number of reactions
+n_met = nrow(filter(config_df, Type == "Metabolite")) # Number of metabolites
+n_rxn = nrow(filter(config_df, Type == "Reaction")) # Number of reactions
 
 conc_ranges = concs_file %>%
   read_tsv(col_names=c("Metabolite", "Low", "High")) %>%
@@ -101,7 +128,22 @@ conc_ranges = concs_file %>%
     )
   ) %>%
   # Remove metabolites that are excluded
-  filter(!(Metabolite %in% exclude_metabolites))
+  inner_join(
+    config_df %>%
+      filter(Type == "Metabolite") %>%
+      select(Id, Name) %>%
+      rename(Metabolite = Id)
+  ) %>%
+  select(-Metabolite) %>%
+  rename(Metabolite = Name) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Group") %>%
+      select(Id, Name) %>%
+      rename(Group = Id)
+  ) %>%
+  select(-Group) %>%
+  rename(Group = Name)
 
 # Perform PCA to plot random walk steps through solution space
 sampling_X = sampling %>%
@@ -178,11 +220,42 @@ ggsave(
 concs = sampling %>%
   select(-Run) %>%
   gather(Metabolite, lnC, -Group, -fMCS, -Replicate) %>%
-  mutate(Concentration = exp(lnC)*1000)
+  mutate(Concentration = exp(lnC)*1000) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Metabolite") %>%
+      select(Id, Name) %>%
+      rename(Metabolite = Id)
+  ) %>%
+  select(-Metabolite) %>%
+  rename(Metabolite = Name) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Group") %>%
+      select(Id, Name) %>%
+      rename(Group = Id)
+  ) %>%
+  select(-Group) %>%
+  rename(Group = Name)
 
 gp = ggplot(
-  filter(concs, !(Metabolite %in% exclude_metabolites)),
-  aes(x=Concentration, fill=Group, y=paste(Group, Replicate))
+  concs,
+  aes(
+    x=Concentration, fill=Group,
+    y=factor(
+      paste(Group, Replicate),
+      levels = paste(
+        config_df %>%
+          filter(Type == "Group") %>%
+          pull(Name) %>%
+          as.character() %>%
+          rep(each=n_rep),
+        concs %>%
+          pull(Replicate) %>%
+          unique()
+      )
+    )
+  )
 )
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Metabolite~., ncol=5)
@@ -253,18 +326,11 @@ concs_comparison = bind_rows(
 )
 
 # Calculate where to place lines showing dissimilarity of distributions
-min_conc = concs %>%
-  filter(!(Metabolite %in% exclude_metabolites)) %>%
-  pull(Concentration) %>%
-  min()
+min_conc = concs %>% pull(Concentration) %>% min()
 
-max_conc = concs %>%
-  filter(!(Metabolite %in% exclude_metabolites)) %>%
-  pull(Concentration) %>%
-  max()
+max_conc = concs %>% pull(Concentration) %>% max()
 
 max_min_conc = concs %>%
-  filter(!(Metabolite %in% exclude_metabolites)) %>%
   group_by(Metabolite) %>%
   summarise(c_min=min(Concentration), c_max=max(Concentration)) %>%
   mutate(
@@ -273,21 +339,30 @@ max_min_conc = concs %>%
   )
 
 concs_comparison_plot = concs_comparison %>%
-  mutate(Y = as.integer(A), Y_end = as.integer(B)) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Group") %>%
+      select(Name) %>%
+      rename(A=Name) %>%
+      mutate(Y = rank(as.integer(A)))
+  ) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Group") %>%
+      select(Name) %>%
+      rename(B=Name) %>%
+      mutate(Y_end = rank(as.integer(B)))
+  ) %>%
   left_join(max_min_conc) %>%
   group_by(Metabolite) %>%
   mutate(X_order = rank(Y + Y_end, ties.method="first")) %>%
   ungroup() %>%
   mutate(X = c_max * (10 ** (0.3*X_order + 0.5)), Group = A) %>%
-  filter(!(Metabolite %in% exclude_metabolites)) %>%
   filter(D > 0.15) %>%
   rename(Difference = D)
 
 # Plot combined distributions of concentrations
-gp = ggplot(
-  filter(concs, !(Metabolite %in% exclude_metabolites)),
-  aes(x=Concentration, fill=Group, y=Group)
-)
+gp = ggplot(concs, aes(x=Concentration, fill=Group, y=Group))
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Metabolite~., ncol=5)
 gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
@@ -333,11 +408,44 @@ sampling_G = as_tibble(
   outer(rep.int(1L, nrow(sampling_X)), G$drG))
 ) %>% bind_cols(select(sampling, Group, fMCS, Replicate))
 
-dfs = sampling_G %>% gather(Reaction, DF, -Group, -fMCS, -Replicate)
+# Organize driving forces with correct Group and Reaction selection
+dfs = sampling_G %>%
+  gather(Reaction, DF, -Group, -fMCS, -Replicate) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Reaction") %>%
+      select(Id, Name) %>%
+      rename(Reaction = Id)
+  ) %>%
+  select(-Reaction) %>%
+  rename(Reaction = Name) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Group") %>%
+      select(Id, Name) %>%
+      rename(Group = Id)
+  ) %>%
+  select(-Group) %>%
+  rename(Group = Name)
 
 gp = ggplot(
-  filter(dfs, !(Reaction %in% exclude_reactions)),
-  aes(x=DF, fill=Group, y=paste(Group, Replicate))
+  dfs,
+  aes(
+    x=DF, fill=Group,
+    y=factor(
+      paste(Group, Replicate),
+      levels = paste(
+        config_df %>%
+          filter(Type == "Group") %>%
+          pull(Name) %>%
+          as.character() %>%
+          rep(each=n_rep),
+        concs %>%
+          pull(Replicate) %>%
+          unique()
+      )
+    )
+  )
 )
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
@@ -373,23 +481,29 @@ dfs_comparison = bind_rows(
 )
 
 # Calculate where to place lines showing dissimilarity of distributions
-min_df = dfs %>%
-  filter(!(Reaction %in% exclude_reactions)) %>%
-  pull(DF) %>%
-  min()
+min_df = dfs %>% pull(DF) %>% min()
 
-max_df = dfs %>%
-  filter(!(Reaction %in% exclude_reactions)) %>%
-  pull(DF) %>%
-  max()
+max_df = dfs %>% pull(DF) %>% max()
 
 max_min_df = dfs %>%
-  filter(!(Reaction %in% exclude_reactions)) %>%
   group_by(Reaction) %>%
   summarise(df_min=min(DF), df_max=max(DF))
 
 dfs_comparison_plot = dfs_comparison %>%
-  mutate(Y = as.integer(A), Y_end = as.integer(B)) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Group") %>%
+      select(Name) %>%
+      rename(A=Name) %>%
+      mutate(Y = rank(as.integer(A)))
+  ) %>%
+  inner_join(
+    config_df %>%
+      filter(Type == "Group") %>%
+      select(Name) %>%
+      rename(B=Name) %>%
+      mutate(Y_end = rank(as.integer(B)))
+  ) %>%
   left_join(max_min_df) %>%
   group_by(Reaction) %>%
   mutate(X_order = rank(Y + Y_end, ties.method="first")) %>%
@@ -402,10 +516,7 @@ dfs_comparison_plot = dfs_comparison %>%
   filter(D > 0.15) %>%
   rename(Difference = D)
 
-gp = ggplot(
-  filter(dfs, !(Reaction %in% exclude_reactions)),
-  aes(x=DF, fill=Group, y=Group)
-)
+gp = ggplot(dfs, aes(x=DF, fill=Group, y=Group))
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
 gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
