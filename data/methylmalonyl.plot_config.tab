@@ -1,0 +1,61 @@
+Id	Name	Type
+pct1	pct1	Reaction
+pcc	pcc	Reaction
+epi	epi	Reaction
+mcm	mcm	Reaction
+suc	suc	Reaction
+frd	frd	Reaction
+fum	fum	Reaction
+mdh	mdh	Reaction
+pcb	pcb	Reaction
+oxaD	oxaD	Reaction
+por	por	Reaction
+pct2	pct2	Reaction
+aceT	aceT	Reaction
+hdr	hdr	Reaction
+fdo	fdo	Reaction
+oxlT	oxlT	Reaction
+fix	fix	Reaction
+nuo	nuo	Reaction
+ATPase	ATPase	Reaction
+acetate_in	Acetate (in)	Metabolite
+acetate_out	Acetate (out)	Metabolite
+acetyl_CoA	Acetyl-CoA	Metabolite
+ADP	ADP	Metabolite
+AMP	AMP	Metabolite
+ATP	ATP	Metabolite
+CO2	CO2	Metabolite
+CoA	CoA	Metabolite
+Fd_ox	Oxidized Fd	Metabolite
+Fd_red	Reduced Fd	Metabolite
+formate_in	Formate (in)	Metabolite
+formate_out	Formate (out)	Metabolite
+fumarate	Fumarate	Metabolite
+H2	Hydrogen	Metabolite
+H2O	Water	Metabolite
+Mg_in	Magnesium (in)	Metabolite
+Mg_out	Magnesium (out)	Metabolite
+MK	MK	Metabolite
+MKH2	MKH2	Metabolite
+NAD	NAD	Metabolite
+NADH	NADH	Metabolite
+NADP	NADP	Metabolite
+NADPH	NADPH	Metabolite
+oxalate_in	Oxalate (in)	Metabolite
+oxalate_out	Oxalate (out)	Metabolite
+oxaloacetate	Oxaloacetate	Metabolite
+Pi	Pi	Metabolite
+PPi	PPi	Metabolite
+propionate	Propionate	Metabolite
+propionyl_CoA	Propionyl-CoA	Metabolite
+pyruvate	Pyruvate	Metabolite
+R_methylmalonyl_CoA	R-methylmalonyl-CoA	Metabolite
+S_malate	S-malate	Metabolite
+S_methylmalonyl_CoA	S-methylmalonyl-CoA	Metabolite
+succinate	Succinate	Metabolite
+succinyl_CoA	Succinyl-CoA	Metabolite
+ac_free	Unrestricted	Group
+ac_0_25x	0.375 g/L	Group
+ac_0_5x	0.75 g/L	Group
+ac_1x	1.5 g/L	Group
+ac_2x	3 g/L	Group

@@ -1,0 +1,34 @@
+Id	Name	Type
+pct1	pct1	Reaction
+pcc	pcc	Reaction
+epi	epi	Reaction
+mcm	mcm	Reaction
+suc	suc	Reaction
+frd	frd	Reaction
+fum	fum	Reaction
+mdh	mdh	Reaction
+pcb	pcb	Reaction
+oxaD	oxaD	Reaction
+por	por	Reaction
+pct2	pct2	Reaction
+aceT	aceT	Reaction
+hdr	hdr	Reaction
+fdo	fdo	Reaction
+propionate	Propionate	Metabolite
+propionyl_CoA	Propionyl-CoA	Metabolite
+S_methylmalonyl_CoA	S-methylmalonyl-CoA	Metabolite
+R_methylmalonyl_CoA	R-methylmalonyl-CoA	Metabolite
+succinyl_CoA	Succinyl-CoA	Metabolite
+succinate	Succinate	Metabolite
+fumarate	Fumarate	Metabolite
+S_malate	S-malate	Metabolite
+oxaloacetate	Oxaloacetate	Metabolite
+pyruvate	Pyruvate	Metabolite
+acetyl_CoA	Acetyl-CoA	Metabolite
+acetate_in	Acetate (in)	Metabolite
+acetate_out	Acetate (out)	Metabolite
+H2	Hydrogen	Metabolite
+CO2	CO2	Metabolite
+ac_free	Unrestricted	Group
+ac_0_25x	0.375 g/L	Group
+ac_2x	3 g/L	Group

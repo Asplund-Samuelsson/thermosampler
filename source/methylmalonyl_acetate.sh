@@ -39,3 +39,12 @@ run_sampling "ac_free" # m
 -c data/mmcoa_fixed_acetate/methylmalonyl.concentrations.ac_free.tab \
 -x H2O \
 -o results/mmcoa_fixed_acetate_plots
+
+# Plot results with fewer reactions, metabolites, and conditions
+./plot_samples.R \
+-i results/mmcoa_fixed_acetate \
+-S data/methylmalonyl.stoich.tab \
+-G data/methylmalonyl.model_drGs.tab \
+-c data/mmcoa_fixed_acetate/methylmalonyl.concentrations.ac_free.tab \
+-C data/methylmalonyl.plot_config_less.tab \
+-o results/mmcoa_fixed_acetate_plots_reduced
