@@ -1,4 +1,4 @@
-pct1	propionate + ATP + CoA <=> propionyl_CoA + ADP + Pi
+pct1	propionate_in + ATP + CoA <=> propionyl_CoA + ADP + Pi
 pcc	ATP + CO2 + propionyl_CoA + H2O <=> ADP + Pi + S_methylmalonyl_CoA
 epi	S_methylmalonyl_CoA <=> R_methylmalonyl_CoA
 mcm	R_methylmalonyl_CoA <=> succinyl_CoA
@@ -17,3 +17,4 @@ oxaD	oxaloacetate + Mg_out <=> pyruvate + CO2 + Mg_in
 nuo	NADPH + MK <=> NADP + MKH2
 fix	MK + NADH <=> NAD + MKH2
 aceT	acetate_in <=> acetate_out
+prpT	propionate_out <=> propionate_in

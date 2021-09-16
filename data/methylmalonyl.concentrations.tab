@@ -26,7 +26,8 @@ oxalate_out	1e-6	1e-2
 oxaloacetate	1e-6	1e-2
 Pi	0.001	0.02
 PPi	1e-4	1e-2
-propionate	0.000684	0.0547
+propionate_in	0.000684	0.0547
+propionate_out	0.000684	0.0547
 propionyl_CoA	1e-6	1e-2
 pyruvate	1e-6	1e-2
 R_methylmalonyl_CoA	1e-6	1e-2

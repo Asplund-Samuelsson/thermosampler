@@ -1,4 +1,5 @@
 Id	Name	Type
+pprT	prpT	Reaction
 pct1	pct1	Reaction
 pcc	pcc	Reaction
 epi	epi	Reaction
@@ -46,7 +47,8 @@ oxalate_out	Oxalate (out)	Metabolite
 oxaloacetate	Oxaloacetate	Metabolite
 Pi	Pi	Metabolite
 PPi	PPi	Metabolite
-propionate	Propionate	Metabolite
+propionate_in	Propionate (in)	Metabolite
+propionate_out	Propionate (out)	Metabolite
 propionyl_CoA	Propionyl-CoA	Metabolite
 pyruvate	Pyruvate	Metabolite
 R_methylmalonyl_CoA	R-methylmalonyl-CoA	Metabolite
