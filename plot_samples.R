@@ -7,6 +7,7 @@ library(doMC)
 library(ggridges)
 library(scales)
 library(optparse)
+library(ggrepel)
 
 ### COMMAND LINE ARGUMENTS #####################################################
 
@@ -150,7 +151,9 @@ sampling_X = sampling %>%
   select(-Group, -Run, -fMCS, -Replicate) %>%
   as.matrix()
 
-sampling_pca = prcomp(scale(sampling_X, scale=F))
+sampling_pca = prcomp(
+  scale(sampling_X[,apply(sampling_X, 2, var, na.rm=TRUE) != 0], scale=T)
+)
 
 # Calculate fraction of variance per PC
 sampling_pca_var = percent(
@@ -542,3 +545,54 @@ ggsave(
   height=230/25.4/(44/5*2)*n_rxn/5*n_grp + 50/25.4,
   limitsize = FALSE
 )
+
+# Plot PCA of metabolite concentrations and driving forces
+plot_pca = function(pca_results, data_type){
+
+  # Create plotting dataframes
+  pca_plot = as.data.frame(pca_results$rotation)
+  pca_plot$Id = rownames(pca_plot)
+
+  # Select wanted data
+  pca_plot = pca_plot %>%
+    inner_join(filter(config_df, Type == data_type) %>% select(-Type))
+
+  # Calculate fraction of variance per PC
+  var_pc = percent(
+    pca_results$sdev^2 / sum(pca_results$sdev^2),
+    accuracy=0.1
+  )
+
+  gp = ggplot(pca_plot, aes(x=PC1, y=PC2, colour=PC3, label=Name))
+  gp = gp + geom_point(aes(size=PC3))
+  gp = gp + scale_size(range=c(1,3))
+  gp = gp + scale_colour_gradient2(low="#d0d1e6", mid="#3690c0", high="#014636")
+  gp = gp + geom_text_repel(force=3, size=4)
+  gp = gp + labs(
+              x=paste("PC1 (", var_pc[1], ")", sep=""),
+              y=paste("PC2 (", var_pc[2], ")", sep=""),
+              colour=paste("PC3 (", var_pc[3], ")", sep="")
+            )
+  gp = gp + theme_bw()
+
+  tag = ifelse(data_type == "Reaction", "dfs", "concs")
+  outfile = paste(outprefix, tag, "pca", "pdf", sep=".")
+
+  ggsave(outfile, gp, height=15/2.54, width=18/2.54)
+
+}
+
+# Plot metabolites from concentration PCA
+plot_pca(sampling_pca, "Metabolite")
+
+# Create driving forces matrix
+dfs_X = dfs %>%
+  spread(Reaction, DF) %>%
+  select(-fMCS, -Replicate, -Group) %>%
+  as.matrix()
+
+# Perform PCA on driving forces
+df_pca = prcomp(scale(dfs_X, scale=T))
+
+# Plot reactions from driving force PCA
+plot_pca(df_pca, "Reaction")
