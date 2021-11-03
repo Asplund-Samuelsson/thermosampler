@@ -80,8 +80,7 @@ sampling = bind_rows(
   }
 )
 
-S = read_tsv(stoich_file) %>%
-  rename(Metabolite = X1)
+S = read_tsv(stoich_file) %>% rename(Metabolite = 1)
 G = read_tsv(drgs_file, col_names=c("Reaction", "drG"))
 RT = 8.31e-3 * 298.15
 
@@ -199,7 +198,7 @@ gp = ggplot(
 )
 gp = gp + geom_point(size=0.5, stroke=0)
 gp = gp + scale_alpha_continuous(range=c(0.5,0.1))
-gp = gp + scale_colour_brewer(palette="Paired", guide=F)
+gp = gp + scale_colour_brewer(palette="Paired", guide="none")
 gp = gp + labs(
             x=paste("PC1 (", sampling_pca_var[1], ")", sep=""),
             y=paste("PC2 (", sampling_pca_var[2], ")", sep="")
@@ -262,7 +261,7 @@ gp = ggplot(
 )
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Metabolite~., ncol=5)
-gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
+gp = gp + scale_fill_brewer(palette="YlGnBu", guide="none")
 gp = gp + geom_point(
   data = conc_ranges %>%
     inner_join(
@@ -368,7 +367,7 @@ concs_comparison_plot = concs_comparison %>%
 gp = ggplot(concs, aes(x=Concentration, fill=Group, y=Group))
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Metabolite~., ncol=5)
-gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
+gp = gp + scale_fill_brewer(palette="YlGnBu", guide="none")
 gp = gp + geom_point(
   data=conc_ranges, shape=124, fill="black", color="black"
 )
@@ -452,7 +451,7 @@ gp = ggplot(
 )
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
-gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
+gp = gp + scale_fill_brewer(palette="YlGnBu", guide="none")
 gp = gp + scale_x_sqrt(breaks=c(1,8,25,50,75,100), minor_breaks=NULL)
 gp = gp + theme_bw()
 gp = gp + theme(
@@ -522,7 +521,7 @@ dfs_comparison_plot = dfs_comparison %>%
 gp = ggplot(dfs, aes(x=DF, fill=Group, y=Group))
 gp = gp + geom_density_ridges(alpha=0.5)
 gp = gp + facet_wrap(Reaction~., ncol=5)
-gp = gp + scale_fill_brewer(palette="YlGnBu", guide=F)
+gp = gp + scale_fill_brewer(palette="YlGnBu", guide="none")
 gp = gp + geom_segment(
   data=dfs_comparison_plot,
   mapping=aes(x=X, xend=X, y=Y, yend=Y_end, color = Difference),
