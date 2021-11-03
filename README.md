@@ -12,7 +12,9 @@ Linear programming and Markov Chain Monte Carlo sampling tools for thermodynamic
 
 **4. [Hit-and-run analysis](#hit)**
 
-**5. [Author](#author)**
+**5. [Case study: Syntrophic communities](#syntrophism)**
+
+**6. [Author](#author)**
 
 <a name="background"></a>
 ## Background
@@ -21,9 +23,11 @@ Linear programming and Markov Chain Monte Carlo sampling tools for thermodynamic
 
 Tools such as NET analysis ([Kümmel _et al._ 2006](https://doi.org/10.1038/msb4100074), [Zamboni _et al._ 2008](https://doi.org/10.1186/1471-2105-9-199)) allow calculation of the minimum and maximum feasible metabolite concentrations in a metabolic network, while ensuring that all reactions have a negative Gibbs free energy change, or, equivalently, a positive thermodynamic driving force. Similarly, Max-min Driving Force analysis (MDF; [Noor _et al._, 2014](http://doi.org/10.1371/journal.pcbi.1003483)) is another linear programming approach to finding an optimal set of metabolite concentrations in a metabolic network. However, the aforementioned approaches only identify extreme concentration values, which is why this `thermosampler` framework was developed to explore the full "solution space" of feasible metabolite concentrations (**[Fig 1](#fig1)**). A random walk, or hit-and-run algorithm, allows assessment of metabolite concentration distributions through exploration of all combinations of concentrations that are thermodynamically feasible.
 
-![alt text](examples/images/thermosampler_explanation.png "Explanation of the thermosampler hit-and-run algorithm")
 <a name="fig1"></a>
-**Fig 1. Thermosampler framework overview and example.** One feasible combination of concentrations within the solution space serves as starting point ("Start") for a random walk. First, a random direction is picked (1). Stepping outside and back into feasible space over and over (2) determines the longest possible step size in the positive and negative directions (3). Then a random step length is performed (4). A new point in the solution space is thus reached and the process is repeated many times over. The right panel depicts 200 steps performed by the `sampling.py` script. Color indicates step number (fMCS; feasible metabolite concentration set). Note that the random walk occurs in logarithmic space, which makes it appear as if higher concentrations are more sparsely sampled.
+
+| ![alt text](examples/images/thermosampler_explanation.png "Explanation of the thermosampler hit-and-run algorithm") |
+| --- |
+| **Fig 1. Thermosampler framework overview and example.** One feasible combination of concentrations within the solution space serves as starting point ("Start") for a random walk. First, a random direction is picked (1). Stepping outside and back into feasible space over and over (2) determines the longest possible step size in the positive and negative directions (3). Then a random step length is performed (4). A new point in the solution space is thus reached and the process is repeated many times over. The right panel depicts 200 steps performed by the `sampling.py` script. Color indicates step number (fMCS; feasible metabolite concentration set). Note that the random walk occurs in logarithmic space, which makes it appear as if higher concentrations are more sparsely sampled. |
 
 ### Toy model
 
@@ -215,6 +219,92 @@ Finally, the plotting script calculates the driving forces for each reaction bas
 Then, driving forces are plotted with replicates combined to yield a smoother representation of the thermodynamic solution space (`results/tca_sampling_plots.sampling_dfs_combo.pdf`). It appears that [R01082](https://www.genome.jp/dbget-bin/www_bget?rn:R01082), i.e. fumarate hydratase, is somewhat of a thermodynamic bottleneck in this experiment. As for the concentrations, the Kolmogorov-Smirnov _D_ statistic ("Difference") is used to highlight differences in the distribution shapes.
 
 ![alt text](examples/images/tca_example_dfs_combo.png "Visualization of random walk driving force distributions for all replicates combined")
+
+<a name="syntrophism"></a>
+## Case study: Syntrophic communities
+
+One application of _thermosampler_ is the study of the metabolite concentrations and thermodynamics of metabolic reactions in microbial communities. Syntrophic propionate oxidation and methanogenesis was considered in this case study.
+
+### Syntrophic propionate oxidizer model
+
+A model was prepared for a syntrophic propionate oxidizing bacterium (SPOB) based on [_Candidatus_ Syntrophopropionicum ammoniitolerans](https://doi.org/10.1111/1462-2920.15388) (**[Fig 2](#fig2)**). The model was parameterized using data from literature and Equilibrator.
+
+| Model component | File |
+| --- | --- |
+| Reactions describing metabolic network | `data/methylmalonyl.model.tab` |
+| Stoichiometric matrix from `stoich.py` | `data/methylmalonyl.stoich.tab` |
+| Standard reaction Gibbs free energy changes | `data/methylmalonyl.model_drGs.tab` |
+| Default metabolite concentration ranges | `data/methylmalonyl.concentrations.tab` |
+| Fixed concentration ratios for MDF | `data/methylmalonyl.ratios.tab` |
+| Concentration ratio ranges for sampling | `data/methylmalonyl.ratio_range.tab` |
+
+<a name="fig2"></a>
+
+| ![alt text](examples/images/methylmalonyl.model.png "Model of SPOB") |
+| --- |
+| **Fig 2. Model of syntrophic propionate oxidizing bacterium.** Protons (H<sup>+</sup>) are not shown. Fd<sub>red</sub>, reduced ferredoxin; Fd<sub>ox</sub>, oxidized ferredoxin; MK, menaquinone. |
+
+Fixed extracellular high and low propionate (input metabolite) and acetate (output metabolite) concentrations were defined to allow _thermosampler_ analysis regarding the thermodynamic effects of such conditions.
+
+| Concentrations | File |
+| --- | --- |
+| Default | `data/mmcoa_fixed_prp_ac/methylmalonyl.concentrations.free.tab` |
+| High acetate | `data/mmcoa_fixed_prp_ac/methylmalonyl.concentrations.acHi.tab` |
+| Low propionate | `data/mmcoa_fixed_prp_ac/methylmalonyl.concentrations.prpLo.tab` |
+| High prp/Low ac | `data/mmcoa_fixed_prp_ac/methylmalonyl.concentrations.prpHi_acLo.tab` |
+| Low prp/High ac | `data/mmcoa_fixed_prp_ac/methylmalonyl.concentrations.prpLo_acHi.tab` |
+
+The SPOB model was used to sample thermodynamically feasible metabolite concentrations for all the conditions above as described in this Bash script:
+
+```
+source/methylmalonyl_fixed_prp_ac.sh
+```
+
+The results were plotted using `plot_samples.R` and yielded the following output:
+
+<details>
+<summary>Full dataset plots.</summary>
+
+```
+# Random walk PCA
+results/mmcoa_fixed_prp_ac_plots.sampling_pca_combo.png
+results/mmcoa_fixed_prp_ac_plots.sampling_pca.png
+
+# Concentrations and driving forces PCA
+results/mmcoa_fixed_prp_ac_plots.concs.pca.pdf
+results/mmcoa_fixed_prp_ac_plots.dfs.pca.pdf
+
+# Concentration distributions
+results/mmcoa_fixed_prp_ac_plots.sampling_concs_combo.pdf
+results/mmcoa_fixed_prp_ac_plots.sampling_concs.pdf
+
+# Driving force distributions
+results/mmcoa_fixed_prp_ac_plots.sampling_dfs_combo.pdf
+results/mmcoa_fixed_prp_ac_plots.sampling_dfs.pdf
+```
+</details>
+
+<details>
+<summary>Reduced dataset plots.</summary>
+
+```
+# Random walk PCA
+results/mmcoa_fixed_prp_ac_plots_reduced.sampling_pca_combo.png
+results/mmcoa_fixed_prp_ac_plots_reduced.sampling_pca.png
+
+# Concentrations and driving forces PCA
+results/mmcoa_fixed_prp_ac_plots_reduced.concs.pca.pdf
+results/mmcoa_fixed_prp_ac_plots_reduced.dfs.pca.pdf
+
+# Concentration distributions
+results/mmcoa_fixed_prp_ac_plots_reduced.sampling_concs_combo.pdf
+results/mmcoa_fixed_prp_ac_plots_reduced.sampling_concs.pdf
+
+# Driving force distributions
+results/mmcoa_fixed_prp_ac_plots_reduced.sampling_dfs_combo.pdf
+results/mmcoa_fixed_prp_ac_plots_reduced.sampling_dfs.pdf
+```
+</details>
 
 <a name="author"></a>
 ## Author
