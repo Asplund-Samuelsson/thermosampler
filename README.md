@@ -227,7 +227,7 @@ One application of _thermosampler_ is the study of the metabolite concentrations
 
 ### Syntrophic propionate oxidizer model
 
-A model was prepared for a syntrophic propionate oxidizing bacterium (SPOB) based on [_Candidatus_ Syntrophopropionicum ammoniitolerans](https://doi.org/10.1111/1462-2920.15388) (**[Fig 2](#fig2)**). The model was parameterized using data from literature and Equilibrator.
+A model was prepared for a syntrophic propionate oxidizing bacterium (SPOB) based on [_Candidatus_ Syntrophopropionicum ammoniitolerans](https://doi.org/10.1111/1462-2920.15388) (**[Fig 2](#fig2)**). The model was parameterized using data from literature and [Equilibrator](https://equilibrator.weizmann.ac.il/).
 
 | Model component | File |
 | --- | --- |
@@ -305,6 +305,58 @@ results/mmcoa_fixed_prp_ac_plots_reduced.sampling_dfs_combo.pdf
 results/mmcoa_fixed_prp_ac_plots_reduced.sampling_dfs.pdf
 ```
 </details>
+
+### Syntrophic methanogenesis model
+
+The SPOB was given company by an acetoclastic methanogen and a hydrogenotrophic methanogen to produce a multi-organism syntrophic model. To distinguish the different organisms' reactions, a prefix was introduced; `po_` for the SPOB, and `ac_` and `hm_` for the acetoclastic and hydrogenotrophic methanogens. The three organisms affected eachother through the overlap in metabolites, _i.e._ hydrogen, formate, acetate, methane, and carbon dioxide. The model was parameterized using data from literature and [Equilibrator](https://equilibrator.weizmann.ac.il/).
+
+| Model component | File |
+| --- | --- |
+| Reactions describing metabolic network | `data/syntrophic.model.tab` |
+| Stoichiometric matrix from `stoich.py` | `data/syntrophic.stoich.tab` |
+| Standard reaction Gibbs free energy changes | `data/syntrophic.model_drGs.tab` |
+| Default metabolite concentration ranges | `data/syntrophic.concentrations.tab` |
+| Individual concentration sums for each organism | `data/syntrophic.conc_sums.tab` |
+| Fixed concentration ratios for MDF | `data/syntrophic.ratios.tab` |
+| Concentration ratio ranges for sampling | `data/syntrophic.ratio_range.tab` |
+
+Additionally, a file with a fixed high methane concentration was prepared to make contrast with free methane concentration thermodynamics:
+
+```
+data/syntrophic.concentrations.high_CH4.tab
+```
+
+The syntrophic model was used to sample thermodynamically feasible metabolite concentrations in free and high methane concentration conditions, as described in these Bash scripts:
+
+```
+source/syntrophic_2x10x10M.sh
+source/syntrophic_2x10x10M.high_CH4.sh
+```
+
+The results were plotted using `plot_samples.R` and yielded the following output:
+
+<details open>
+<summary>Methane comparison plots.</summary>
+
+```
+# Random walk PCA
+results/syntrophic_CH4.sampling_pca_combo.png
+results/syntrophic_CH4.sampling_pca.png
+
+# Concentrations and driving forces PCA
+results/syntrophic_CH4.concs.pca.pdf
+results/syntrophic_CH4.dfs.pca.pdf
+
+# Concentration distributions
+results/syntrophic_CH4.sampling_concs_combo.pdf
+results/syntrophic_CH4.sampling_concs.pdf
+
+# Driving force distributions
+results/syntrophic_CH4.sampling_dfs_combo.pdf
+results/syntrophic_CH4.sampling_dfs.pdf
+```
+</details>
+
 
 <a name="author"></a>
 ## Author
