@@ -1,3 +1,5 @@
+![alt text](thermosampler.png "Thermosampler")
+
 # Thermosampler
 
 Linear programming and Markov Chain Monte Carlo sampling tools for thermodynamic analysis of metabolism.
