@@ -7,15 +7,10 @@ Linear programming and Markov Chain Monte Carlo sampling tools for thermodynamic
 ### Contents
 
 1. [Background](#background)
-
 2. [System requirements](#requirements)
-
 3. [MDF and NEM analysis](#mdf)
-
 4. [Hit-and-run analysis](#hit)
-
 5. [Case study: Syntrophic communities](#syntrophism)
-
 6. [Author](#author)
 
 <a name="background"></a>
