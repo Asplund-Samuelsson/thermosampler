@@ -165,6 +165,14 @@ sampling_pca_plot = as_tibble(sampling_pca$x) %>%
   select(PC1, PC2) %>%
   bind_cols(select(sampling, Group, fMCS, Replicate))
 
+# Rename and subset Group according to config
+sampling_pca_plot = filter(config_df, Type == "Group") %>%
+  select(-Type) %>%
+  rename(Group=Id) %>%
+  inner_join(sampling_pca_plot) %>%
+  select(-Group) %>%
+  rename(Group=Name)
+
 gp = ggplot(
   sampling_pca_plot,
   aes(x=PC1, y=PC2, colour=fMCS)
@@ -585,7 +593,8 @@ plot_pca = function(pca_results, data_type){
 plot_pca(sampling_pca, "Metabolite")
 
 # Create driving forces matrix
-dfs_X = dfs %>%
+dfs_X = sampling_G %>%
+  gather(Reaction, DF, -Group, -fMCS, -Replicate) %>%
   spread(Reaction, DF) %>%
   select(-fMCS, -Replicate, -Group) %>%
   as.matrix()
