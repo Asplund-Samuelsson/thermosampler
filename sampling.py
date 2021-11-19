@@ -334,6 +334,13 @@ def main(
 
     sWrite(" Done.\n")
 
+    # Make sure we can write to outfile before the heavy lifting
+    try:
+        outfile = open(outfile_name, 'w')
+    except IOError as e:
+        print('Unable to open outfile for writing:', str(e))
+        sys.exit()
+
     sWrite("Performing hit-and-run sampling...")
     if c_loaded:
         fMCSs = [
@@ -356,7 +363,6 @@ def main(
     sWrite(" Done.\n")
 
     # Save data to outfile
-    outfile = open(outfile_name, 'w')
     header = 'Run\tfMCS\t' + "\t".join(S_pd.index.values) + "\n"
     junk = outfile.write(header)
     r = 0
