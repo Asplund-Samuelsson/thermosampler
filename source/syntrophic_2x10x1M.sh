@@ -1,3 +1,7 @@
+#!/bin/bash
+# Create output directory
+mkdir -p results/syntrophic_2x10x1M
+
 # Sample 10 replicates of 1 million steps in parallel at feasible delta G
 for i in {1..10}; do
   echo "./sampling.py --reactions data/syntrophic.model.tab \

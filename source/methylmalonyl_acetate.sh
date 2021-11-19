@@ -1,3 +1,7 @@
+#!/bin/bash
+# Create output directory
+mkdir -p results/mmcoa_fixed_acetate
+
 # Perform MDF analysis
 ls data/mmcoa_fixed_acetate/* | while read conc_file; do
   # Extract group name (extracellular acetate concentration type)
