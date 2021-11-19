@@ -217,6 +217,73 @@ Then, driving forces are plotted with replicates combined to yield a smoother re
 
 ![alt text](examples/images/tca_example_dfs_combo.png "Visualization of random walk driving force distributions for all replicates combined")
 
+##### Use a plot config file to filter, order, and rename reactions, metabolites and groups
+
+The `plot_samples.R` script can be supplied with a config file to filter, order, and rename reactions and metabolites. The example config file `examples/tca.plot_config.tab` is provided. Let's look at the contents:
+
+```
+cat examples/tca.plot_config.tab | column -tn -s $'\t'
+```
+
+```
+Id        Name                      Type
+R00351    Citrate synthase          Reaction
+R01325    Citrate hydro-lyase       Reaction
+R01900    Isocitrate hydro-lyase    Reaction
+R00709    Isocitrate dehydrogenase  Reaction
+R08549    2OG dehydrogenase         Reaction
+R00405    Succinyl-CoA synthetase   Reaction
+M00148    Succinate dehydrogenase   Reaction
+R01082    Fumarate hydratase        Reaction
+R00342    Malate dehydrogenase      Reaction
+C00122    Fumarate                  Metabolite
+C00149    Malate                    Metabolite
+C00311    Isocitrate                Metabolite
+C00036    Oxaloacetate              Metabolite
+C00042    Succinate                 Metabolite
+Feasible  Free                      Group
+Optimal   MDF                       Group
+```
+
+The config file has three columns:
+- `Id` is the identifier used for reactions, metabolites, or groups in the model and results files.
+- `Name` is the alternative name we want to display in the plots, replacing the identifiers that are otherwise displayed.
+- `Type` is one of `Reaction`, `Metabolite`, or `Group`, and defines what variable the identifier and name refers to. At least one line for each of the three types must be present in the config file to create meaningful plots and avoid crashes.
+
+The exact order of reactions, metabolites, and groups in the config file is used to order the plots in the output accordingly. Thus, we use the plot config file to get nicely ordered TCA cycle plots with meaningful names:
+
+```
+./plot_samples.R -i results/tca_sampling -S results/tca.stoich.tab \
+-G examples/tca.model_drgs.tab -c examples/tca.concentrations.tab \
+-C examples/tca.plot_config.tab -o results/tca_cfg/tca_cfg_sampling_plots
+```
+
+These are the plots made with the help of the config file:
+
+```
+results/tca_cfg/tca_cfg_sampling_plots.sampling_pca.png
+results/tca_cfg/tca_cfg_sampling_plots.sampling_pca_combo.png
+results/tca_cfg/tca_cfg_sampling_plots.sampling_concs.pdf
+results/tca_cfg/tca_cfg_sampling_plots.sampling_concs_combo.pdf
+results/tca_cfg/tca_cfg_sampling_plots.sampling_dfs.pdf
+results/tca_cfg/tca_cfg_sampling_plots.sampling_dfs_combo.pdf
+results/tca_cfg/tca_cfg_sampling_plots.concs.pca.pdf
+results/tca_cfg/tca_cfg_sampling_plots.dfs.pca.pdf
+```
+
+The concentrations now display only the five selected metabolites, C00122, C00149, C00311, C00036, and C00042, using their names Fumarate, Malate, Isocitrate, Oxaloacetate, and Succinate. Note that the groups of samples have been renamed to Free and MDF.
+
+![alt text](examples/images/tca_cfg_example_concs.png "Re-configured concentration distribution visualization")
+
+The driving forces are now displayed under more informative reaction names ordered according to their position in the TCA cycle.
+
+![alt text](examples/images/tca_cfg_example_dfs.png "Re-configured driving force distributino visualization")
+
+The metabolite concentrations and reaction driving forces PCA plots show the data of interest according to the definitions in the plot config file.
+
+| ![alt text](examples/images/tca_cfg_example_concs_pca.png "Re-configured concentrations PCA plot") | ![alt text](examples/images/tca_cfg_example_dfs_pca.png "Re-configured driving forces PCA plot") |
+| --- | --- |
+
 <a name="syntrophism"></a>
 ## Case study: Syntrophic communities
 
