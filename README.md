@@ -437,4 +437,5 @@ results/syntrophic_CH4.sampling_dfs.pdf
 
 <a name="author"></a>
 ## Author
-Johannes Asplund-Samuelsson, KTH (johannes.asplund.samuelsson@scilifelab.se)
+
+Johannes Asplund-Samuelsson (johannes.aspsam@gmail.com)
