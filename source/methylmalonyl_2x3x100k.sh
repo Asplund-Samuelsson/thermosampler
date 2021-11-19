@@ -1,3 +1,4 @@
+#!/bin/bash
 # Feasible, Replicate 1
 ./sampling.py --reactions data/methylmalonyl.model.tab \
 --std_drG data/methylmalonyl.model_drGs.tab \
