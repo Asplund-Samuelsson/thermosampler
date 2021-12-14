@@ -21,6 +21,11 @@ def sError(string):
     sys.stderr.flush()
 
 
+def remove_comments(line):
+    """Returns the line with comments and excessive whitespace stripped."""
+    return line.split('#')[0].strip()
+
+
 def parse_equation(equation):
     """Parses a KEGG reaction string into a tuple of lists of tuples."""
     # Split the equation into lists
@@ -62,6 +67,7 @@ def read_reactions(reactions_text, proton_name = "C00080"):
     # Iterate over lines in reactions_text
     d = collections.OrderedDict()
     for line in reactions_text.split("\n"):
+        line = remove_comments(line)
         if line == "":
             continue
         # Extract reaction ID and parsed equation from line
@@ -101,6 +107,7 @@ def read_reaction_drGs(reaction_drGs_text):
     d = []
     cols = []
     for line in reaction_drGs_text.split("\n"):
+        line = remove_comments(line)
         if line == "":
             continue
         # Extract reaction ID, drG and intermediate identifier values
@@ -145,6 +152,7 @@ def read_constraints(constraints_text, default_spacing='lin'):
     # Iterate over lines in constraints_text
     data = []
     for line in constraints_text.split("\n"):
+        line = remove_comments(line)
         row = []
         if line == "":
             continue
@@ -201,6 +209,7 @@ def read_ratio_constraints(ratio_text, default_step=5, default_spacing='lin'):
     # Iterate over lines in constraints_text
     d = []
     for line in ratio_text.split("\n"):
+        line = remove_comments(line)
         if line == "":
             continue
         # Extract compound ID and values from line

@@ -9,7 +9,7 @@ import re
 import sys, os
 
 # Import functions from MDF script
-from mdf import parse_equation, read_reactions, read_reaction_drGs
+from mdf import parse_equation, read_reactions, read_reaction_drGs, remove_comments
 from mdf import read_constraints, sWrite, sError
 from mdf import read_ratio_constraints
 
@@ -249,7 +249,7 @@ def read_concentrations(c_text):
 
 def read_sums(sums_text, S_pd):
     # Parse text
-    sums_list = [x.split("\t") for x in sums_text.strip().split("\n")]
+    sums_list = [remove_comments(x).split("\t") for x in sums_text.strip().split("\n")]
     # Make into data frame
     sums_df = pd.DataFrame(sums_list)
     # Find row index of each compound in stoichiometric matrix
