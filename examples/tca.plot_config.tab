@@ -1,0 +1,17 @@
+Id	Name	Type
+R00351	Citrate synthase	Reaction
+R01325	Citrate hydro-lyase	Reaction
+R01900	Isocitrate hydro-lyase	Reaction
+R00709	Isocitrate dehydrogenase	Reaction
+R08549	2OG dehydrogenase	Reaction
+R00405	Succinyl-CoA synthetase	Reaction
+M00148	Succinate dehydrogenase	Reaction
+R01082	Fumarate hydratase	Reaction
+R00342	Malate dehydrogenase	Reaction
+C00122	Fumarate	Metabolite
+C00149	Malate	Metabolite
+C00311	Isocitrate	Metabolite
+C00036	Oxaloacetate	Metabolite
+C00042	Succinate	Metabolite
+Feasible	Free	Group
+Optimal	MDF	Group

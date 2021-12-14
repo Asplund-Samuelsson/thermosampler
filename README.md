@@ -189,33 +189,113 @@ results/tca_sampling_plots.sampling_concs.pdf
 results/tca_sampling_plots.sampling_concs_combo.pdf
 results/tca_sampling_plots.sampling_dfs.pdf
 results/tca_sampling_plots.sampling_dfs_combo.pdf
+results/tca_sampling_plots.concs.pca.pdf
+results/tca_sampling_plots.dfs.pca.pdf
 ```
 
 The `combo` tag indicates that replicates have been combined in the plot and are not displayed individually, as in the other variant of each plot type. Combining multiple  replicates improves coverage of the solution space.
 
-The PCA divided by individual samples (`results/tca_sampling_plots.sampling_pca.png`) shows how each random walk in the hit-and-run algorithm has traversed the solution space. The point color indicates the index of each feasible metabolite concentration set (fMCS) produced by the random walk. The figure below shows a cutout with a single replicate, where the left panel is the random walk at a driving force > 0 kJ/mol ("Feasible"), and the right panel has a driving force > 1.18 kJ/mol ("Optimal"). Note that the actual output file contains all replicates and is provided in the `results` directory.
+| `results/tca_sampling_plots.sampling_pca.png` |
+| --- |
+| ![alt text](examples/images/tca_example_pca.png "Concentration PCA visualization of random walk for one replicate") |
+| The PCA divided by individual samples shows how each random walk in the hit-and-run algorithm has traversed the solution space. The point color indicates the index of each feasible metabolite concentration set (fMCS) produced by the random walk. The figure below shows a cutout with a single replicate, where the left panel is the random walk at a driving force > 0 kJ/mol ("Feasible"), and the right panel has a driving force > 1.18 kJ/mol ("Optimal"). Note that the actual output file contains all replicates and is provided in the `results` directory. |
 
-![alt text](examples/images/tca_example_pca.png "Concentration PCA visualization of random walk for one replicate")
+| `results/tca_sampling_plots.sampling_pca_combo.png` |
+| --- |
+| ![alt text](examples/images/tca_example_pca_combo.png "Concentration PCA visualization of random walk for all five replicates") |
+| The combined PCA plot layers all replicate random walks, giving an indication of the coverage of the solution space. Each replicate up to 12 in total is given a unique color. The transparency attempts to show the step index. |
 
-The combined PCA plot (`results/tca_sampling_plots.sampling_pca_combo.png`) layers all replicate random walks, giving an indication of the coverage of the solution space. Each replicate up to 12 in total is given a unique color. The transparency attempts to show the step index.
+| `results/tca_sampling_plots.sampling_concs.pdf` |
+| --- |
+| ![alt text](examples/images/tca_example_concs.png "Visualization of random walk concentration distributions for all five replicates") |
+| Concentration distributions obtained from the random walk are first visualized divided by replicate. "Feasible" is a driving force > 0 kJ/mol and "Optimal" is a driving force > 1.18 kJ/mol. Note that "Feasible" and "Optimal" are the `Group` variable names we gave to the two experiments through their file names. Up to 9 such names/groups can be selected freely to accomodate different types of experiments. In the concentration plots below, the vertical line marks on the x axes indicate the boundaries of the input concentration ranges. |
 
-![alt text](examples/images/tca_example_pca_combo.png "Concentration PCA visualization of random walk for all five replicates")
+| `results/tca_sampling_plots.sampling_concs_combo.pdf` |
+| --- |
+| ![alt text](examples/images/tca_example_concs_combo.png "Visualization of random walk concentration distributions for all replicates combined") |
+| As the random walks are quite noisy, it is best to combine multiple replicates to obtain smoother distributions. It can also be helpful to perform more steps, for example in the millions. The combined plot visualizes all values from all replicates of each group. Distributions are compared between `Group` variables with the Kolmogorov-Smirnov algorithm (function `ks.test`), providing the _D_ statistic that measures how different two distributions are. The _D_ statistic is indicated by the color ("Difference") of vertical lines connecting two distributions, situated in each facet to the right of the distributions. Any two distributions with _D_ ≤ 0.15 are considered equal and therefore do not get a connecting vertical line. |
 
-Concentration distributions obtained from the random walk are first visualized divided by replicate (`results/tca_sampling_plots.sampling_concs.pdf`). "Feasible" is a driving force > 0 kJ/mol and "Optimal" is a driving force > 1.18 kJ/mol. Note that "Feasible" and "Optimal" are the `Group` variable names we gave to the two experiments through their file names. Up to 9 such names/groups can be selected freely to accomodate different types of experiments. In the concentration plots below, the vertical line marks on the x axes indicate the boundaries of the input concentration ranges.
+| `results/tca_sampling_plots.sampling_dfs.pdf` |
+| --- |
+| ![alt text](examples/images/tca_example_dfs.png "Visualization of random walk driving force distributions for all five replicates") |
+| Finally, the plotting script calculates the driving forces for each reaction based on the sampled metabolite concentrations. The driving forces are first plotted per replicate. Note that the x axis uses a square root scale. |
 
-![alt text](examples/images/tca_example_concs.png "Visualization of random walk concentration distributions for all five replicates")
+| `results/tca_sampling_plots.sampling_dfs_combo.pdf` |
+| --- |
+| ![alt text](examples/images/tca_example_dfs_combo.png "Visualization of random walk driving force distributions for all replicates combined") |
+| Then, driving forces are plotted with replicates combined to yield a smoother representation of the thermodynamic solution space. It appears that [R01082](https://www.genome.jp/dbget-bin/www_bget?rn:R01082), _i.e._ fumarate hydratase, is somewhat of a thermodynamic bottleneck in this experiment. As for the concentrations, the Kolmogorov-Smirnov _D_ statistic ("Difference") is used to highlight differences in the distribution shapes. |
 
-As the random walks are quite noisy, it is best to combine multiple replicates to obtain smoother distributions. It can also be helpful to perform more steps, for example in the millions. The combined plot visualizes all values from all replicates of each group (`results/tca_sampling_plots.sampling_concs_combo.pdf`). Distributions are compared between `Group` variables with the Kolmogorov-Smirnov algorithm (function `ks.test`), providing the _D_ statistic that measures how different two distributions are. The _D_ statistic is indicated by the color ("Difference") of vertical lines connecting two distributions, situated in each facet to the right of the distributions. Any two distributions with _D_ ≤ 0.15 are considered equal and therefore do not get a connecting vertical line.
+| `results/tca_sampling_plots.concs.pca.pdf` | `results/tca_sampling_plots.dfs.pca.pdf` |
+| --- | --- |
+| ![alt text](examples/images/tca_example_concs_pca.png "Visualization of metabolite co-variation through PCA of all concentrations") | ![alt text](examples/images/tca_example_dfs_pca.png "Visualization of reaction co-variation through PCA of all driving forces") |
+| PCA of all metabolite concentrations reveals co-variation between metabolites. | PCA of all driving forces reveals co-variation between reactions. |
 
-![alt text](examples/images/tca_example_concs_combo.png "Visualization of random walk concentration distributions for all replicates combined")
+##### Use a plot config file to filter, order, and rename reactions, metabolites and groups
 
-Finally, the plotting script calculates the driving forces for each reaction based on the sampled metabolite concentrations. The driving forces are first plotted per replicate (`results/tca_sampling_plots.sampling_dfs.pdf`). Note that the x axis uses a square root scale.
+The `plot_samples.R` script can be supplied with a config file to filter, order, and rename reactions and metabolites. The example config file `examples/tca.plot_config.tab` is provided. Let's look at the contents:
 
-![alt text](examples/images/tca_example_dfs.png "Visualization of random walk driving force distributions for all five replicates")
+```
+cat examples/tca.plot_config.tab | column -tn -s $'\t'
+```
 
-Then, driving forces are plotted with replicates combined to yield a smoother representation of the thermodynamic solution space (`results/tca_sampling_plots.sampling_dfs_combo.pdf`). It appears that [R01082](https://www.genome.jp/dbget-bin/www_bget?rn:R01082), i.e. fumarate hydratase, is somewhat of a thermodynamic bottleneck in this experiment. As for the concentrations, the Kolmogorov-Smirnov _D_ statistic ("Difference") is used to highlight differences in the distribution shapes.
+```
+Id        Name                      Type
+R00351    Citrate synthase          Reaction
+R01325    Citrate hydro-lyase       Reaction
+R01900    Isocitrate hydro-lyase    Reaction
+R00709    Isocitrate dehydrogenase  Reaction
+R08549    2OG dehydrogenase         Reaction
+R00405    Succinyl-CoA synthetase   Reaction
+M00148    Succinate dehydrogenase   Reaction
+R01082    Fumarate hydratase        Reaction
+R00342    Malate dehydrogenase      Reaction
+C00122    Fumarate                  Metabolite
+C00149    Malate                    Metabolite
+C00311    Isocitrate                Metabolite
+C00036    Oxaloacetate              Metabolite
+C00042    Succinate                 Metabolite
+Feasible  Free                      Group
+Optimal   MDF                       Group
+```
 
-![alt text](examples/images/tca_example_dfs_combo.png "Visualization of random walk driving force distributions for all replicates combined")
+The config file has three columns:
+- `Id` is the identifier used for reactions, metabolites, or groups in the model and results files.
+- `Name` is the alternative name we want to display in the plots, replacing the identifiers that are otherwise displayed.
+- `Type` is one of `Reaction`, `Metabolite`, or `Group`, and defines what variable the identifier and name refers to. At least one line for each of the three types must be present in the config file to create meaningful plots and avoid crashes.
+
+The exact order of reactions, metabolites, and groups in the config file is used to order the plots in the output accordingly. Thus, we use the plot config file to get nicely ordered TCA cycle plots with meaningful names:
+
+```
+./plot_samples.R -i results/tca_sampling -S results/tca.stoich.tab \
+-G examples/tca.model_drgs.tab -c examples/tca.concentrations.tab \
+-C examples/tca.plot_config.tab -o results/tca_cfg/tca_cfg_sampling_plots
+```
+
+These are the plots made with the help of the config file:
+
+```
+results/tca_cfg/tca_cfg_sampling_plots.sampling_pca.png
+results/tca_cfg/tca_cfg_sampling_plots.sampling_pca_combo.png
+results/tca_cfg/tca_cfg_sampling_plots.sampling_concs.pdf
+results/tca_cfg/tca_cfg_sampling_plots.sampling_concs_combo.pdf
+results/tca_cfg/tca_cfg_sampling_plots.sampling_dfs.pdf
+results/tca_cfg/tca_cfg_sampling_plots.sampling_dfs_combo.pdf
+results/tca_cfg/tca_cfg_sampling_plots.concs.pca.pdf
+results/tca_cfg/tca_cfg_sampling_plots.dfs.pca.pdf
+```
+
+The concentrations now display only the five selected metabolites, C00122, C00149, C00311, C00036, and C00042, using their names Fumarate, Malate, Isocitrate, Oxaloacetate, and Succinate. Note that the groups of samples have been renamed to Free and MDF.
+
+![alt text](examples/images/tca_cfg_example_concs.png "Re-configured concentration distribution visualization")
+
+The driving forces are now displayed under more informative reaction names ordered according to their position in the TCA cycle.
+
+![alt text](examples/images/tca_cfg_example_dfs.png "Re-configured driving force distributino visualization")
+
+The metabolite concentrations and reaction driving forces PCA plots show the data of interest according to the definitions in the plot config file.
+
+| ![alt text](examples/images/tca_cfg_example_concs_pca.png "Re-configured concentrations PCA plot") | ![alt text](examples/images/tca_cfg_example_dfs_pca.png "Re-configured driving forces PCA plot") |
+| --- | --- |
 
 <a name="syntrophism"></a>
 ## Case study: Syntrophic communities
@@ -357,4 +437,5 @@ results/syntrophic_CH4.sampling_dfs.pdf
 
 <a name="author"></a>
 ## Author
-Johannes Asplund-Samuelsson, KTH (johannes.asplund.samuelsson@scilifelab.se)
+
+Johannes Asplund-Samuelsson (johannes.aspsam@gmail.com)
