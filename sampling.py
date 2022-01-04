@@ -250,6 +250,8 @@ def read_concentrations(c_text):
 def read_sums(sums_text, S_pd):
     # Parse text
     sums_list = [remove_comments(x).split("\t") for x in sums_text.strip().split("\n")]
+    # Remove empty entries (from blank lines)
+    sums_list = [x for x in sums_list if len(x) > 1]
     # Make into data frame
     sums_df = pd.DataFrame(sums_list)
     # Find row index of each compound in stoichiometric matrix
