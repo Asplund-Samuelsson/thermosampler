@@ -200,7 +200,13 @@ def hit_and_run(
         if not is_feasible(
                 c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, c_sums, mdf
             ):
-            print("Warning: Infeasible point reached.")
+            sError("Warning: Infeasible point reached: ")
+            if not df_ok(c, g, RT, S, mdf): sError("Driving forces below minimum. ")
+            if not ratios_ok(c, ratio_lim, ratio_mat): sError("Concentration ratios out of bounds. ")
+            if not sum_ok(c, max_tot_c): sError("Concentration sum above maximum. ")
+            if not limits_ok(c, c_lim): sError("Concentration limits exceeded. ")
+            if not sums_ok(c, c_sums): sError("Concentration sum groups above individual maximums. ")
+            sError('\n')
             break
         # Store concentration if the step is correct
         if (i + 1) % n == 0:
@@ -363,7 +369,7 @@ def main(
             )\
             for i in range(n_starts)
         ]
-    sWrite(" Done.\n")
+    sWrite("Done.\n")
 
     # Save data to outfile
     header = 'Run\tfMCS\t' + "\t".join(S_pd.index.values) + "\n"
