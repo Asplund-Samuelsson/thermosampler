@@ -9,6 +9,10 @@ import collections
 import itertools
 import argparse
 import re
+from joblib import Parallel, delayed
+from multiprocessing import cpu_count
+
+NCORES = None
 
 # Define functions
 def sWrite(string):
@@ -654,10 +658,7 @@ def multi_mdf(S, all_drGs, constraints, ratio_constraints=None, net_rxns=[],
     # Iterate over all combinations of conditions, directions and ratios
     n = 0
 
-    for params in prep_iter():
-        n += 1
-        progress = float(n / M * 100)
-        sWrite("\rPerforming MDF optimization... %0.1f%%" % progress)
+    def mdf_iter(params):
         # Extract specific condition, direction and ratio constraints
         if params[0] is not None:
             condition = pd.DataFrame(params[0][1]).T
@@ -731,8 +732,10 @@ def multi_mdf(S, all_drGs, constraints, ratio_constraints=None, net_rxns=[],
                 0.0, # Failure
                 np.nan # No MDF value
             ])
-        # Append row to expected result
-        mdf_table = mdf_table.append(pd.DataFrame([mdf_row], columns = column_labels))
+        return mdf_row
+
+    mdf_table = pd.DataFrame(Parallel(n_jobs=max(1, NCORES))(delayed(mdf_iter)(params) for params in prep_iter()), 
+                             columns = column_labels)
 
     return mdf_table.sort_values(sort_labels)
 
@@ -845,7 +848,14 @@ if __name__ == "__main__":
         '--max_conc', type=float, default=0.01,
         help='Default maximum concentration (M).'
         )
+    parser.add_argument(
+        '--num_cores', type=int, default=cpu_count() - 2,
+        help='Number of CPU cores to use when evaluating all reaction directions. Defaults to all but 2.'
+        # the -2 is to account for the main process and to leave some CPU
+        # for other tasks
+    )
     args = parser.parse_args()
+    NCORES = args.num_cores if args.all_directions else 1
     main(
         args.reactions, args.std_drG, args.outfile, args.constraints,
         args.ratios, args.pathway, args.all_directions, args.T, args.R,
