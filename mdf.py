@@ -9,6 +9,7 @@ import collections
 import itertools
 import argparse
 import re
+from tqdm import tqdm
 from joblib import Parallel, delayed
 from multiprocessing import cpu_count
 
@@ -734,7 +735,7 @@ def multi_mdf(S, all_drGs, constraints, ratio_constraints=None, net_rxns=[],
             ])
         return mdf_row
 
-    mdf_table = pd.DataFrame(Parallel(n_jobs=max(1, NCORES))(delayed(mdf_iter)(params) for params in prep_iter()), 
+    mdf_table = pd.DataFrame(Parallel(n_jobs=max(1, NCORES))(delayed(mdf_iter)(params) for params in tqdm(prep_iter(), total=M)), 
                              columns = column_labels)
 
     return mdf_table.sort_values(sort_labels)
@@ -787,10 +788,9 @@ def main(reaction_file, std_drG_file, outfile_name, cons_file, ratio_cons_file,
     else:
         net_rxns = []
 
-    sWrite("Performing MDF optimization...")
+    sWrite("Performing MDF optimization...\n")
     mdf_table = multi_mdf(S, std_drGs, constraints, ratio_constraints, net_rxns,
                           all_directions, x_max_default, x_min_default, T, R)
-    sWrite("\n")
 
     # Write MDF results to outfile
     sWrite("Saving MDF results to csv...")

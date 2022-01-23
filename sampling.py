@@ -7,6 +7,7 @@ import collections
 import argparse
 import re
 import sys, os
+from tqdm import trange
 
 # Import functions from MDF script
 from mdf import parse_equation, read_reactions, read_reaction_drGs, remove_comments
@@ -180,7 +181,7 @@ def hit_and_run(
     # Set up concentration storage list
     fMCSs = [c]
     # Perform n steps
-    for i in range(0, n_samples):
+    for i in trange(0, n_samples):
         # Generate random direction
         direction = random_direction(c_lim)
         # If it is the first step, unstick the direction
@@ -343,7 +344,7 @@ def main(
         print('Unable to open outfile for writing:', str(e))
         sys.exit()
 
-    sWrite("Performing hit-and-run sampling...")
+    sWrite("Performing hit-and-run sampling...\n")
     if c_loaded:
         fMCSs = [
             hit_and_run(
