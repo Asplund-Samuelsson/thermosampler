@@ -850,12 +850,12 @@ if __name__ == "__main__":
         )
     parser.add_argument(
         '--num_cores', type=int, default=cpu_count() - 2,
-        help='Number of CPU cores to use when evaluating all reaction directions. Defaults to all but 2.'
+        help='Number of CPU cores to use when evaluating multiple reactions. Defaults to all but 2 available cores.'
         # the -2 is to account for the main process and to leave some CPU
         # for other tasks
     )
     args = parser.parse_args()
-    NCORES = args.num_cores if args.all_directions else 1
+    NCORES = args.num_cores
     main(
         args.reactions, args.std_drG, args.outfile, args.constraints,
         args.ratios, args.pathway, args.all_directions, args.T, args.R,
