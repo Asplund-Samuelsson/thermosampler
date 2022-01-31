@@ -452,7 +452,16 @@ if __name__ == "__main__":
         '--conc_sums', default=None,
         help='Tab-delimited compound name, group, and group sum (default None).'
     )
+    parser.add_argument(
+        '--quiet', action='store_true',
+        help='Suppress non-error output.'
+    )
     args = parser.parse_args()
+
+    if args.quiet:
+        sWrite = lambda x: None
+        trange = range
+
     main(
         args.reactions, args.std_drG, args.outfile, args.constraints,
         args.ratios, args.max_conc, args.steps, args.starts,
