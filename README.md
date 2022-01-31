@@ -76,12 +76,12 @@ Practical examples of using the `thermosampler` algorithm with `sampling.py` are
 <a name="requirements"></a>
 ## System requirements
 
-- Linux operating system (Tested on Ubuntu 18.04.5 LTS and 20.04.2 LTS)
-- bash 4.0 (Tested with 4.4.20 and 5.0.17)
-- Python ≥ 3.7 (Tested with 3.7.6)
+- Operating system with Unix-like terminal (Tested on Ubuntu 18.04.5 LTS, 20.04.2 LTS, and MacOS 12.1)
+- bash (Tested with 3.2.57, 4.4.20 and 5.0.17)
+- Python ≥ 3.7 (Tested with 3.7.6 and 3.10.0)
 - R ≥ 4.1.1 (Tested with 4.1.1)
-- GNU parallel 20161222 (Tested with 20161222)
-- Python libraries: numpy, pandas, scipy
+- GNU parallel (Tested with 20161222 and 20220122)
+- Python libraries: numpy, pandas, scipy, tqdm, joblib
 - R libraries: doMC, foreach, ggridges, optparse, scales, tidyverse
 
 <a name="mdf"></a>
