@@ -24,13 +24,13 @@ S = read_tsv("data/syntrophic.stoich.tab") %>%
   filter(Metabolite != "H2O")
 G = read_tsv(
   "data/syntrophic.model_drGs.tab",
-  col_names=c("Reaction", "drG")
+  col_names=c("Reaction", "drG"), comment='#'
 )
 RT = 8.31e-3 * 298.15
 
 conc_ranges = read_tsv(
   "data/syntrophic.concentrations.tab",
-  col_names=c("Metabolite", "Low", "High")
+  col_names=c("Metabolite", "Low", "High"), comment='#'
 ) %>%
   gather(Bound, Concentration, -Metabolite) %>%
   mutate(Concentration = 1000*Concentration) %>%
