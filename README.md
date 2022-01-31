@@ -84,6 +84,20 @@ Practical examples of using the `thermosampler` algorithm with `sampling.py` are
 - Python libraries: numpy, pandas, scipy, tqdm, joblib
 - R libraries: doMC, foreach, ggridges, optparse, scales, tidyverse
 
+### Setting up the virtual environment
+
+It is recommended to run the Python scripts within a virtual environment. The virtual environment can be created using the following command:
+
+```
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+On Windows systems, replace "python3" with "py", and activate the virtual environment using the command ```venv\Scripts\activate.bat```. Please note that this software has not been tested on Windows systems.
+
+For improved performance om Mac systems with M1 processors, numpy can be built with support for the Accelerate framework. This can lead to roughly a doubling of performance in hit-and-run sampling. For more information, see this [Stack Overflow question](https://stackoverflow.com/questions/69848969/how-to-build-numpy-from-source-linked-to-apple-accelerate-framework). 
+
 <a name="mdf"></a>
 ## MDF and NEM analysis
 
