@@ -25,7 +25,7 @@ run_sampling () {
     --constraints data/mmcoa_fixed_acetate/methylmalonyl.concentrations.${1}.tab \
     --concs results/methylmalonyl.mdf.${1}.csv \
     --steps 10000000 --max_conc 1.3 -n 1000"
-  done | parallel --no-notice --jobs 10 > /dev/null 2>&1 &
+  done | parallel --no-notice --jobs -2 > /dev/null 2>&1 &
 }
 
 # Call function to do sampling

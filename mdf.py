@@ -9,6 +9,11 @@ import collections
 import itertools
 import argparse
 import re
+from tqdm import tqdm
+from joblib import Parallel, delayed
+from multiprocessing import cpu_count
+
+NCORES = None
 
 # Define functions
 def sWrite(string):
@@ -19,6 +24,11 @@ def sWrite(string):
 def sError(string):
     sys.stderr.write(string)
     sys.stderr.flush()
+
+
+def remove_comments(line):
+    """Returns the line with comments and excessive whitespace stripped."""
+    return line.split('#')[0].strip()
 
 
 def parse_equation(equation):
@@ -62,6 +72,7 @@ def read_reactions(reactions_text, proton_name = "C00080"):
     # Iterate over lines in reactions_text
     d = collections.OrderedDict()
     for line in reactions_text.split("\n"):
+        line = remove_comments(line)
         if line == "":
             continue
         # Extract reaction ID and parsed equation from line
@@ -101,6 +112,7 @@ def read_reaction_drGs(reaction_drGs_text):
     d = []
     cols = []
     for line in reaction_drGs_text.split("\n"):
+        line = remove_comments(line)
         if line == "":
             continue
         # Extract reaction ID, drG and intermediate identifier values
@@ -145,6 +157,7 @@ def read_constraints(constraints_text, default_spacing='lin'):
     # Iterate over lines in constraints_text
     data = []
     for line in constraints_text.split("\n"):
+        line = remove_comments(line)
         row = []
         if line == "":
             continue
@@ -201,6 +214,7 @@ def read_ratio_constraints(ratio_text, default_step=5, default_spacing='lin'):
     # Iterate over lines in constraints_text
     d = []
     for line in ratio_text.split("\n"):
+        line = remove_comments(line)
         if line == "":
             continue
         # Extract compound ID and values from line
@@ -645,10 +659,7 @@ def multi_mdf(S, all_drGs, constraints, ratio_constraints=None, net_rxns=[],
     # Iterate over all combinations of conditions, directions and ratios
     n = 0
 
-    for params in prep_iter():
-        n += 1
-        progress = float(n / M * 100)
-        sWrite("\rPerforming MDF optimization... %0.1f%%" % progress)
+    def mdf_iter(params):
         # Extract specific condition, direction and ratio constraints
         if params[0] is not None:
             condition = pd.DataFrame(params[0][1]).T
@@ -722,8 +733,10 @@ def multi_mdf(S, all_drGs, constraints, ratio_constraints=None, net_rxns=[],
                 0.0, # Failure
                 np.nan # No MDF value
             ])
-        # Append row to expected result
-        mdf_table = mdf_table.append(pd.DataFrame([mdf_row], columns = column_labels))
+        return mdf_row
+
+    mdf_table = pd.DataFrame(Parallel(n_jobs=max(1, NCORES))(delayed(mdf_iter)(params) for params in tqdm(prep_iter(), total=M)), 
+                             columns = column_labels)
 
     return mdf_table.sort_values(sort_labels)
 
@@ -775,10 +788,9 @@ def main(reaction_file, std_drG_file, outfile_name, cons_file, ratio_cons_file,
     else:
         net_rxns = []
 
-    sWrite("Performing MDF optimization...")
+    sWrite("Performing MDF optimization...\n")
     mdf_table = multi_mdf(S, std_drGs, constraints, ratio_constraints, net_rxns,
                           all_directions, x_max_default, x_min_default, T, R)
-    sWrite("\n")
 
     # Write MDF results to outfile
     sWrite("Saving MDF results to csv...")
@@ -836,7 +848,14 @@ if __name__ == "__main__":
         '--max_conc', type=float, default=0.01,
         help='Default maximum concentration (M).'
         )
+    parser.add_argument(
+        '--num_cores', type=int, default=cpu_count() - 2,
+        help='Number of CPU cores to use when evaluating multiple reactions. Defaults to all but 2 available cores.'
+        # the -2 is to account for the main process and to leave some CPU
+        # for other tasks
+    )
     args = parser.parse_args()
+    NCORES = args.num_cores
     main(
         args.reactions, args.std_drG, args.outfile, args.constraints,
         args.ratios, args.pathway, args.all_directions, args.T, args.R,

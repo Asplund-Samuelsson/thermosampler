@@ -81,13 +81,13 @@ sampling = bind_rows(
 )
 
 S = read_tsv(stoich_file) %>% rename(Metabolite = 1)
-G = read_tsv(drgs_file, col_names=c("Reaction", "drG"))
+G = read_tsv(drgs_file, comment='#', col_names=c("Reaction", "drG"))
 RT = 8.31e-3 * 298.15
 
 
 # Load configuration data frame and exclude metabolites and reactions
 if (config_file != "") {
-  config_df = read_tsv(config_file)
+  config_df = read_tsv(config_file, comment='#')
 } else {
   config_df = tibble(
     Id = c(G$Reaction, S$Metabolite, unique(sampling$Group)),
@@ -117,7 +117,7 @@ n_met = nrow(filter(config_df, Type == "Metabolite")) # Number of metabolites
 n_rxn = nrow(filter(config_df, Type == "Reaction")) # Number of reactions
 
 conc_ranges = concs_file %>%
-  read_tsv(col_names=c("Metabolite", "Low", "High")) %>%
+  read_tsv(col_names=c("Metabolite", "Low", "High"), comment='#') %>%
   gather(Bound, Concentration, -Metabolite) %>%
   mutate(Concentration = 1000*Concentration) %>%
   # Add every combination of Group and Bound

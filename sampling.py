@@ -7,9 +7,10 @@ import collections
 import argparse
 import re
 import sys, os
+from tqdm import trange
 
 # Import functions from MDF script
-from mdf import parse_equation, read_reactions, read_reaction_drGs
+from mdf import parse_equation, read_reactions, read_reaction_drGs, remove_comments
 from mdf import read_constraints, sWrite, sError
 from mdf import read_ratio_constraints
 
@@ -180,7 +181,7 @@ def hit_and_run(
     # Set up concentration storage list
     fMCSs = [c]
     # Perform n steps
-    for i in range(0, n_samples):
+    for i in trange(0, n_samples):
         # Generate random direction
         direction = random_direction(c_lim)
         # If it is the first step, unstick the direction
@@ -199,7 +200,13 @@ def hit_and_run(
         if not is_feasible(
                 c, g, RT, S, ratio_lim, ratio_mat, max_tot_c, c_lim, c_sums, mdf
             ):
-            print("Warning: Infeasible point reached.")
+            sError("Warning: Infeasible point reached: ")
+            if not df_ok(c, g, RT, S, mdf): sError("Driving forces below minimum. ")
+            if not ratios_ok(c, ratio_lim, ratio_mat): sError("Concentration ratios out of bounds. ")
+            if not sum_ok(c, max_tot_c): sError("Concentration sum above maximum. ")
+            if not limits_ok(c, c_lim): sError("Concentration limits exceeded. ")
+            if not sums_ok(c, c_sums): sError("Concentration sum groups above individual maximums. ")
+            sError('\n')
             break
         # Store concentration if the step is correct
         if (i + 1) % n == 0:
@@ -249,7 +256,9 @@ def read_concentrations(c_text):
 
 def read_sums(sums_text, S_pd):
     # Parse text
-    sums_list = [x.split("\t") for x in sums_text.strip().split("\n")]
+    sums_list = [remove_comments(x).split("\t") for x in sums_text.strip().split("\n")]
+    # Remove empty entries (from blank lines)
+    sums_list = [x for x in sums_list if len(x) > 1]
     # Make into data frame
     sums_df = pd.DataFrame(sums_list)
     # Find row index of each compound in stoichiometric matrix
@@ -341,7 +350,7 @@ def main(
         print('Unable to open outfile for writing:', str(e))
         sys.exit()
 
-    sWrite("Performing hit-and-run sampling...")
+    sWrite("Performing hit-and-run sampling...\n")
     if c_loaded:
         fMCSs = [
             hit_and_run(
@@ -360,7 +369,7 @@ def main(
             )\
             for i in range(n_starts)
         ]
-    sWrite(" Done.\n")
+    sWrite("Done.\n")
 
     # Save data to outfile
     header = 'Run\tfMCS\t' + "\t".join(S_pd.index.values) + "\n"
@@ -443,7 +452,16 @@ if __name__ == "__main__":
         '--conc_sums', default=None,
         help='Tab-delimited compound name, group, and group sum (default None).'
     )
+    parser.add_argument(
+        '--quiet', action='store_true',
+        help='Suppress non-error output.'
+    )
     args = parser.parse_args()
+
+    if args.quiet:
+        sWrite = lambda x: None
+        trange = range
+
     main(
         args.reactions, args.std_drG, args.outfile, args.constraints,
         args.ratios, args.max_conc, args.steps, args.starts,
